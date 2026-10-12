@@ -1,4 +1,4 @@
-# Know, What? — Game Overview
+# The Quintessence Project — Game Overview
 
 This document explains the game to someone who has never heard of it. Read all of it before building anything. It describes what the game is, what it should feel like, the core pillars every decision is checked against, how the world works, and the rules every part of the code must follow.
 
@@ -6,7 +6,7 @@ This document explains the game to someone who has never heard of it. Read all o
 
 ## 1. The game in one paragraph
 
-*Know, What?* is a solo game about discovering how an alien world works. You crash-land on an unknown planet with almost nothing, and nobody tells you anything. The world runs on its own physics: strange elements that react to weight, impact, motion and invisible energies. Surviving and repairing your ship give you reasons to act, but how you do it is up to you. The real game is figuring out the rules of the universe through observation, experiments and building machines. That understanding is the progression. You don't unlock a tech tree; you learn a world. It is a solo game that also works well with friends in co-op.
+*The Quintessence Project* is a solo game about discovering how an alien world works. You crash-land on an unknown planet with almost nothing, and nobody tells you anything. The world runs on its own physics: strange elements that react to weight, impact, motion and invisible energies. Surviving and repairing your ship give you reasons to act, but how you do it is up to you. The real game is figuring out the rules of the universe through observation, experiments and building machines. That understanding is the progression. You don't unlock a tech tree; you learn a world. It is a solo game that also works well with friends in co-op.
 
 ---
 
@@ -18,7 +18,7 @@ Everything in this project serves one feeling. It comes from the creator's own e
 - **The redstone lab.** As kids, the creator and a friend built a huge lab just to test redstone contraptions, and kept inventing their own techniques for engineering problems.
 - **The pulse circuit.** They once stumbled on a circuit that pulsed on its own, then worked out how to change its timing. Understanding *why* it pulsed was more exciting than anything they built with it.
 
-In Minecraft, understanding the world is optional, and most players learn it from YouTube. In *Know, What?*, understanding the world **is** the game. Engineering is the medium; **science is the reward**: the moment a hidden rule clicks into place.
+In Minecraft, understanding the world is optional, and most players learn it from YouTube. In *The Quintessence Project*, understanding the world **is** the game. Engineering is the medium; **science is the reward**: the moment a hidden rule clicks into place.
 
 **The anti-goal:** a fixed game loop, or an authored chain of discoveries. An earlier version of this design failed exactly here. As soon as the designer decides the route, the premise is broken.
 

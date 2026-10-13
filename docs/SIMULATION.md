@@ -64,6 +64,38 @@ A cell **emits** when its response is `emit` and its output is above 0. Fields a
 
 **Direction.** Directional spreads (`radial`, `ray`) also store, per cell, `Σ value·unit(cell − source)`: literally "away from its source", weighted by strength. Sources on opposite sides cancel. This is what a push follows.
 
+## Triggers and responses
+
+Every element has exactly one trigger and one response (§6 grammar). The same code serves every element:
+
+| Trigger | Value `x` |
+| --- | --- |
+| `pressure` | `load` on the cell (static resting mass) |
+| `motion` | speed of the cell's body, `√(vx² + vy²)`; 0 if anchored |
+| `impact` | largest closing speed the cell felt in the last motion phase |
+| `exposure` (energy) | that energy's field at the cell minus the cell's own emission |
+
+```
+target = min(max, gain · max(0, x − threshold) · max(0, 1 − fatigue · strain / strainMax))
+output = max(target, previousOutput · decay)        (outputs below 1e-6 snap to 0)
+```
+
+- `decay` lets a response linger: Exgen's burst fires on one tick's impact and dies away over a few ticks. A decay of 0 means the output follows the trigger at once.
+- `emit`: the cell is a source of that energy next tick, with strength `output`. Responses can carry a pitch, `pitch · x` (Colomium's hum rises with speed).
+- `push`: a force `output · P / field`, where `P` is the trigger energy's direction vector at the cell. The force points away from the sources, and opposite sources cancel. Only elements whose response is `push` are pushed (in v0, only Bormite). The energy-level `effects.push` can push all loose matter, but it is 0.
+- Every response builds strain: `strain += build · output` per tick.
+
+**Recoil-free push.** Teta's push is a local per-cell force. A source pushes the cells around it, including Bormite bonded to the same body as the source, and nothing pushes back on the source. A cart carrying its own Lyegen and a Bormite sail is therefore driven by its own Teta. This is the literal local rule; the consequence is logged in `docs/TUNING.md`.
+
+## Generic energy effects
+
+Effects each energy has on *every* cell it reaches, whatever the element (`energies.<id>.effects` in the data):
+
+- `strain`: strain per tick per unit of field. In v0 this is heat ("adds strain to what it touches"). It also strains Hard Rock, which "reacts to nothing directly".
+- `shake`: loose bodies with mass ≤ `maxMass`, where the field reaches `threshold`, get a velocity kick of `strength · field` in one of 8 directions. The direction comes from the hash RNG. In v0 this is hum ("shakes loose small things", "dust jitters on surfaces").
+- `loosen`: anchored cells with mass ≤ `maxMass`, where the field reaches `threshold`, become loose. Set to `null` (off) in v0.
+- `push`: a force on all loose matter along the field direction. It's 0 in v0 (see above).
+
 ## One tick
 
 `World.step()` always runs these phases in this order:

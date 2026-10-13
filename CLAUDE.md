@@ -28,21 +28,30 @@ Read `GAME_OVERVIEW.md` before changing anything. This repo is currently a **rul
 - `src/scenarios/`: machine setups built from plain blocks. They may name machines; the core may not.
 - `src/ui/`: the browser sandbox.
 - `tests/`: core unit tests, scenario (machine) tests, and the guard.
-- `docs/SIMULATION.md`: design of the update model. `docs/TUNING.md`: log of every parameter change and why.
+- `scenes/`: every scenario exported as scene JSON (open with the sandbox's Load button).
+- `docs/SIMULATION.md`: design of the update model, the interpretations of the overview, and how each machine arises. `docs/TUNING.md`: log of every parameter change and why, results per machine, and open design observations.
+
+## Status (rule set v0)
+
+All seven §6 machines emerge from the generic rules, and each has a black-box test in `tests/scenarios/`: bouncer, buzzer, runaway engine, light link, light switch, latch, invisible energy. Decisions made at planning time: bonded rigid bodies with a recoil-free Teta push (needed for the runaway cart), and Teta pushes only Bormite (its response). See `docs/TUNING.md` for caveats and things to watch.
 
 ## Commands
 
 ```
 npm install
-npm run dev        # sandbox UI at http://localhost:5173
-npm test           # all tests (headless)
+npm run dev        # sandbox UI at http://localhost:5173 (developer overlay: key D)
+npm test           # all tests, headless: core units, the seven machines, scenes, guard
 npm run typecheck  # core without DOM, then everything
 npm run build      # typecheck + production build
-npm run sweep      # headless parameter sweeps (scripts/sweep.ts)
+npx tsx scripts/sweep.ts bouncer 'elements.bormite.response.gain=0.003,0.004' shaft=6,10 ticks=3000
+                   # sweep rule values (dotted paths into rules/v0.json) x scenario params, print pulse stats
+npx tsx scripts/probe.ts bouncer shaft=10 ticks=200   # per-tick trace of a scenario
+npx tsx scripts/export-scenes.ts                      # regenerate scenes/*.json from src/scenarios
 ```
 
 ## Working rules for this repo
 
 - If a machine doesn't emerge, change `rules/v0.json` (and log it in `docs/TUNING.md`), or write down which rule seems to be missing. Never add machine-aware code.
+- After any change to `rules/v0.json`, run `npm test`: the machine tests are the regression suite for the rule set.
 - If following the overview seems to conflict with getting a machine to emerge, stop and ask.
 - Out of scope for now: the solver, Lama, the Node Book, BluePrinter, Beep, survival, EES, final art, 3D.

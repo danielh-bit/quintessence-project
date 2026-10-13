@@ -1,0 +1,146 @@
+{
+  "version": "v0",
+  "description": "Rule set v0 (GAME_OVERVIEW.md section 6). Every number here is a tuning parameter; log changes in docs/TUNING.md.",
+  "world": {
+    "gravity": 0.04,
+    "maxSpeed": 2.0,
+    "airDrag": 0.0,
+    "friction": 0.5,
+    "restitution": 0.0,
+    "minImpact": 0.05,
+    "impactStrain": 1.0
+  },
+  "energies": {
+    "teta": {
+      "name": "Teta",
+      "spread": "radial",
+      "range": 5,
+      "effects": { "strain": 0, "push": 0 }
+    },
+    "glow": {
+      "name": "Glow",
+      "spread": "ray",
+      "range": 40,
+      "effects": { "strain": 0, "push": 0 }
+    },
+    "heat": {
+      "name": "Heat",
+      "spread": "diffusion",
+      "conductivity": 0.1,
+      "loss": 0.002,
+      "effects": { "strain": 0.001 }
+    },
+    "hum": {
+      "name": "Hum",
+      "spread": "conduction",
+      "range": 48,
+      "effects": {
+        "strain": 0,
+        "shake": { "strength": 0.002, "threshold": 1.0, "maxMass": 1.0 },
+        "loosen": { "threshold": null, "maxMass": 1.0 }
+      }
+    }
+  },
+  "elements": {
+    "lobime": {
+      "name": "Lobime",
+      "color": "#7a7f8c",
+      "mass": 3,
+      "blocks": ["teta", "glow", "heat", "hum"],
+      "trigger": { "kind": "none" },
+      "response": { "kind": "none" },
+      "strain": { "build": 0, "recover": 1.0, "max": 1000, "fatigue": 0 },
+      "degradesTo": null
+    },
+    "galog": {
+      "name": "Galog",
+      "color": "#8a6d3b",
+      "mass": 3,
+      "blocks": ["glow"],
+      "trigger": { "kind": "pressure" },
+      "response": { "kind": "emit", "energy": "teta", "gain": 1.0, "threshold": 0, "max": 100, "decay": 0 },
+      "strain": { "build": 0.01, "recover": 0.05, "max": 100, "fatigue": 1 },
+      "degradesTo": null
+    },
+    "exgen": {
+      "name": "Exgen",
+      "color": "#b5523b",
+      "mass": 3,
+      "blocks": ["glow"],
+      "trigger": { "kind": "impact" },
+      "response": { "kind": "emit", "energy": "teta", "gain": 60, "threshold": 0.1, "max": 200, "decay": 0.6 },
+      "strain": { "build": 0.002, "recover": 0.01, "max": 100, "fatigue": 0 },
+      "degradesTo": null
+    },
+    "bormite": {
+      "name": "Bormite",
+      "color": "#d9c7f5",
+      "mass": 0.2,
+      "blocks": ["glow"],
+      "trigger": { "kind": "exposure", "energy": "teta" },
+      "response": { "kind": "push", "gain": 0.002, "threshold": 0, "max": 100, "decay": 0 },
+      "strain": { "build": 0.001, "recover": 0.05, "max": 100, "fatigue": 0 },
+      "degradesTo": null
+    },
+    "queflair": {
+      "name": "Queflair",
+      "color": "#e8d36a",
+      "mass": 1,
+      "blocks": ["glow"],
+      "trigger": { "kind": "exposure", "energy": "teta" },
+      "response": { "kind": "emit", "energy": "glow", "gain": 1.5, "threshold": 0.5, "max": 20, "decay": 0 },
+      "strain": { "build": 0.01, "recover": 0.05, "max": 100, "fatigue": 0 },
+      "degradesTo": null
+    },
+    "colomium": {
+      "name": "Colomium",
+      "color": "#3b8ea5",
+      "mass": 3,
+      "blocks": ["glow"],
+      "trigger": { "kind": "motion" },
+      "response": { "kind": "emit", "energy": "hum", "gain": 10, "threshold": 0.01, "max": 50, "decay": 0, "pitch": 1.0 },
+      "strain": { "build": 0.0005, "recover": 0.05, "max": 100, "fatigue": 0 },
+      "degradesTo": null
+    },
+    "sormite": {
+      "name": "Sormite",
+      "color": "#9c3f7a",
+      "mass": 3,
+      "blocks": ["glow"],
+      "trigger": { "kind": "exposure", "energy": "hum" },
+      "response": { "kind": "emit", "energy": "heat", "gain": 0.1, "threshold": 0.1, "max": 10, "decay": 0 },
+      "strain": { "build": 0.01, "recover": 0.05, "max": 100, "fatigue": 0 },
+      "degradesTo": null
+    },
+    "lyegen": {
+      "name": "Lyegen",
+      "color": "#5aa05a",
+      "mass": 3,
+      "blocks": ["glow"],
+      "trigger": { "kind": "exposure", "energy": "heat" },
+      "response": { "kind": "emit", "energy": "teta", "gain": 1.0, "threshold": 0.5, "max": 100, "decay": 0 },
+      "strain": { "build": 0.005, "recover": 0.05, "max": 100, "fatigue": 0 },
+      "degradesTo": null
+    },
+    "ralgen": {
+      "name": "Ralgen",
+      "color": "#e0a24a",
+      "mass": 1,
+      "blocks": ["glow"],
+      "trigger": { "kind": "exposure", "energy": "glow" },
+      "response": { "kind": "emit", "energy": "teta", "gain": 2.0, "threshold": 0.5, "max": 40, "decay": 0 },
+      "strain": { "build": 0.005, "recover": 0.05, "max": 100, "fatigue": 0 },
+      "degradesTo": null
+    },
+    "hard_rock": {
+      "name": "Hard Rock",
+      "color": "#3a3a44",
+      "mass": 6,
+      "blocks": ["glow"],
+      "trigger": { "kind": "none" },
+      "response": { "kind": "none" },
+      "strain": { "build": 0, "recover": 0.1, "max": 400, "fatigue": 0 },
+      "degradesTo": null
+    }
+  }
+}

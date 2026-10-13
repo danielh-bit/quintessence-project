@@ -1,0 +1,19 @@
+{
+  // The simulation core: no DOM, no Node. If core code reaches for `document`,
+  // `window` or `process`, this config fails to type-check (GAME_OVERVIEW §11.5).
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "types": [],
+    "strict": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/core/**/*.ts"]
+}

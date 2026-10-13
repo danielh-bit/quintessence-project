@@ -49,6 +49,21 @@ When integrating velocity, a loose body gets acceleration `a = (0, g) + F/M`, wh
 
 *Choice:* load is **not** reduced while a push is lifting the body. If it were (true normal force), a Teta-lifted stack on a Galog would settle into a hover at partial load and could never leave the Galog, so the "weight is lifted → Galog stops → weight drops" cycle could not exist. "Weight resting on it" is read literally: the mass that is resting there.
 
+## Energies
+
+Each energy's `spread` in the data picks one of four algorithms, so the core never knows which energy is Teta. Every element lists the energies it `blocks`. In v0, Lobime blocks all four, and every element blocks Glow (it is opaque), but empty space doesn't.
+
+A cell **emits** when its response is `emit` and its output is above 0. Fields are built in phase 2 from the outputs of the previous tick. `ownField` records what a cell put into its own field, and **exposure** leaves it out, so an element never triggers itself.
+
+| Spread | Used by (v0) | How it works |
+| --- | --- | --- |
+| `radial` | Teta | Shortest path over the 8 neighbours (steps of 1 and √2), up to `range` cells. It doesn't enter cells that block it, and a diagonal step can't squeeze between two blockers, so a diagonal Lobime wall seals. Value is `S·(1 − d/(range+1))`. It flows around obstacles (weaker behind them) and through any matter that doesn't block it. |
+| `ray` | Glow | Straight lines of sight. From each source, Bresenham lines run to every cell on the edge of its range square. A ray stops after the first cell that blocks it, and that cell is still lit (the surface the light lands on). Each cell takes a source's light once. Value is `B·(1 − d/(range+1))` with Euclidean `d`. |
+| `conduction` | Hum | Breadth-first through **touching** filled cells (4 neighbours) that don't block it. It never crosses empty space. Long `range`, linear falloff over the path length. Terrain, loose cells and bodies conduct alike when they touch, so dust lying on a humming floor hums too. The **pitch** at a cell is the amplitude-weighted mean of the sources' pitch (a response can give its emission a pitch, `pitch × trigger`; Colomium's rises with its speed). |
+| `diffusion` | Heat | Stored in matter: it is state and travels with moving cells. Emitters add their output to their own cell. Every touching pair of filled, non-blocking cells exchanges `conductivity × difference` (double-buffered, so the result doesn't depend on visiting order), and every cell loses `loss` of its value. Empty space holds nothing. Slow and steady: heat "crawls" along a stone bar. |
+
+**Direction.** Directional spreads (`radial`, `ray`) also store, per cell, `Σ value·unit(cell − source)`: literally "away from its source", weighted by strength. Sources on opposite sides cancel. This is what a push follows.
+
 ## One tick
 
 `World.step()` always runs these phases in this order:

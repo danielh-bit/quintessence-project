@@ -1,5 +1,7 @@
 // Inspector (developer overlay only): world.inspect(x, y) of the selected cell,
 // refreshed every frame, plus the events of the last step and a short log.
+// Its content is in the page only while the overlay is on (rule 11.2: nothing
+// diagnostic for the player, not even hidden).
 
 import type { WorldEvent } from "../core";
 import type { App } from "./app";
@@ -15,6 +17,7 @@ export class InspectorPanel {
   private readonly rows = new Map<string, HTMLElement>();
   private readonly lastEvents: HTMLElement;
   private readonly log: HTMLElement;
+  private readonly content: HTMLElement[];
   private lastEventsKey = "";
   private logKey = "";
 
@@ -26,7 +29,7 @@ export class InspectorPanel {
     for (const en of app.rules.energies) this.addRow(`field:${en.id}`, en.name, "field");
     this.lastEvents = h("ul", { class: "events" });
     this.log = h("ul", { class: "events log" });
-    this.el = h("section", { class: "section dev-only" }, [
+    this.content = [
       h("h3", { text: "Inspector" }),
       this.hint,
       this.table,
@@ -34,8 +37,32 @@ export class InspectorPanel {
       this.lastEvents,
       h("h4", { text: "Recent events" }),
       this.log,
-    ]);
+    ];
+    this.el = h("section", { class: "section inspector" });
     app.on("frame", () => this.update());
+    app.on("overlay", () => this.sync());
+    // A new world: both event lists redraw.
+    app.on("world", () => {
+      this.lastEventsKey = "";
+      this.logKey = "";
+    });
+    this.sync();
+  }
+
+  /** Attach the content while the overlay is on; empty it when it goes off. */
+  private sync(): void {
+    const on = this.app.overlay.enabled;
+    this.el.hidden = !on;
+    if (on) {
+      if (this.el.childElementCount === 0) this.el.replaceChildren(...this.content);
+      return;
+    }
+    this.el.replaceChildren();
+    for (const v of this.rows.values()) v.textContent = "";
+    this.lastEvents.replaceChildren();
+    this.log.replaceChildren();
+    this.lastEventsKey = "";
+    this.logKey = "";
   }
 
   private addRow(key: string, label: string, cls = ""): void {

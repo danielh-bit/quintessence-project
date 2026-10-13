@@ -45,6 +45,14 @@ const VELOCITY_TICKS = 10;
 /** Maximum opacity of one field layer. */
 const FIELD_ALPHA = 0.55;
 
+/** The visible cell range: x0 <= x < x1, y0 <= y < y1. */
+export interface View {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
 export interface MarkedEvent {
   tick: number;
   x: number;
@@ -82,34 +90,39 @@ export class OverlayDrawer {
     w: World,
     s: OverlayState,
     cs: number,
+    view: View,
     recentEvents: readonly MarkedEvent[],
   ): void {
     this.measure(w);
-    this.drawCellLayers(ctx, w, s, cs);
-    if (s.anchors && cs >= 4) this.drawAnchors(ctx, w, cs);
-    if (s.outlines) this.drawOutlines(ctx, w, cs);
-    if (s.load) this.drawLoad(ctx, w, cs);
-    if (s.arrows) this.drawArrows(ctx, w, s, cs);
+    this.drawCellLayers(ctx, w, s, cs, view);
+    if (s.anchors && cs >= 4) this.drawAnchors(ctx, w, cs, view);
+    if (s.outlines) this.drawOutlines(ctx, w, cs, view);
+    if (s.load) this.drawLoad(ctx, w, cs, view);
+    if (s.arrows) this.drawArrows(ctx, w, s, cs, view);
     if (s.velocity) this.drawVelocities(ctx, w, cs);
     if (s.events) this.drawEvents(ctx, w, cs, recentEvents);
   }
 
-  // Field intensities and strain, as translucent colour per cell.
-  private drawCellLayers(ctx: CanvasRenderingContext2D, w: World, s: OverlayState, cs: number): void {
+  // Field intensities and strain, as translucent colour per (visible) cell.
+  private drawCellLayers(ctx: CanvasRenderingContext2D, w: World, s: OverlayState, cs: number, view: View): void {
     const layers: Array<{ f: Float64Array; inv: number; c: RGB }> = [];
     for (const en of w.rules.energies) {
       const m = this.maxField[en.index];
       if (s.energies[en.index] && m > 0) layers.push({ f: w.field[en.index], inv: 1 / m, c: overlayColor(en.index) });
     }
     if (layers.length === 0 && !s.strain) return;
-    if (!this.img || this.img.width !== w.width || this.img.height !== w.height) {
-      this.canvas.width = w.width;
-      this.canvas.height = w.height;
-      this.img = this.ctx.createImageData(w.width, w.height);
+    const nx = view.x1 - view.x0;
+    const ny = view.y1 - view.y0;
+    if (!this.img || this.img.width < nx || this.img.height < ny) {
+      this.canvas.width = Math.max(nx, this.img?.width ?? 0);
+      this.canvas.height = Math.max(ny, this.img?.height ?? 0);
+      this.img = this.ctx.createImageData(this.canvas.width, this.canvas.height);
     }
     const d = this.img.data;
+    const stride = this.img.width;
     const els = w.rules.elements;
-    for (let i = 0; i < w.size; i++) {
+    for (let y = view.y0; y < view.y1; y++) for (let x = view.x0; x < view.x1; x++) {
+      const i = y * w.width + x;
       let R = 0;
       let G = 0;
       let B = 0;
@@ -136,7 +149,7 @@ export class OverlayDrawer {
           A = a + A * (1 - a);
         }
       }
-      const o = i * 4;
+      const o = ((y - view.y0) * stride + (x - view.x0)) * 4;
       if (A > 0) {
         d[o] = R / A;
         d[o + 1] = G / A;
@@ -144,16 +157,17 @@ export class OverlayDrawer {
         d[o + 3] = A * 255;
       } else d[o + 3] = 0;
     }
-    this.ctx.putImageData(this.img, 0, 0);
+    this.ctx.putImageData(this.img, 0, 0, 0, 0, nx, ny);
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(this.canvas, 0, 0, w.width * cs, w.height * cs);
+    ctx.drawImage(this.canvas, 0, 0, nx, ny, view.x0 * cs, view.y0 * cs, nx * cs, ny * cs);
   }
 
-  private drawAnchors(ctx: CanvasRenderingContext2D, w: World, cs: number): void {
+  private drawAnchors(ctx: CanvasRenderingContext2D, w: World, cs: number, view: View): void {
     const r = Math.max(1, Math.round(cs / 6));
     ctx.fillStyle = "rgba(255,255,255,0.4)";
     ctx.beginPath();
-    for (let i = 0; i < w.size; i++) {
+    for (let y = view.y0; y < view.y1; y++) for (let x = view.x0; x < view.x1; x++) {
+      const i = y * w.width + x;
       if (w.elem[i] === 0 || w.body[i] !== 0) continue;
       const cx = (w.xOf(i) + 0.5) * cs;
       const cy = (w.yOf(i) + 0.5) * cs;
@@ -163,7 +177,7 @@ export class OverlayDrawer {
   }
 
   // Multi-cell bodies get a coloured outline; one-cell loose bodies a faint one.
-  private drawOutlines(ctx: CanvasRenderingContext2D, w: World, cs: number): void {
+  private drawOutlines(ctx: CanvasRenderingContext2D, w: World, cs: number, view: View): void {
     const W = w.width;
     for (const b of w.bodies.values()) {
       const multi = b.cells.length > 1;
@@ -174,6 +188,7 @@ export class OverlayDrawer {
       for (const c of b.cells) {
         const x = w.xOf(c);
         const y = w.yOf(c);
+        if (x < view.x0 - 1 || x > view.x1 || y < view.y0 - 1 || y > view.y1) continue;
         const x0 = x * cs + ox;
         const y0 = y * cs + oy;
         const same = (nx: number, ny: number) =>
@@ -201,13 +216,14 @@ export class OverlayDrawer {
     }
   }
 
-  private drawLoad(ctx: CanvasRenderingContext2D, w: World, cs: number): void {
+  private drawLoad(ctx: CanvasRenderingContext2D, w: World, cs: number, view: View): void {
     if (this.maxLoad <= 0) return;
     if (cs >= 12) {
       ctx.font = `${Math.max(7, Math.floor(cs * 0.42))}px ui-monospace, monospace`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      for (let i = 0; i < w.size; i++) {
+      for (let y = view.y0; y < view.y1; y++) for (let x = view.x0; x < view.x1; x++) {
+        const i = y * w.width + x;
         const L = w.load[i];
         if (L <= 0) continue;
         const text = L >= 100 ? L.toFixed(0) : L >= 10 ? L.toFixed(0) : L.toFixed(1);
@@ -221,7 +237,8 @@ export class OverlayDrawer {
     } else {
       // Too small for numbers: a small bar per loaded cell, scaled to the max.
       ctx.fillStyle = "rgba(230,240,255,0.85)";
-      for (let i = 0; i < w.size; i++) {
+      for (let y = view.y0; y < view.y1; y++) for (let x = view.x0; x < view.x1; x++) {
+        const i = y * w.width + x;
         const L = w.load[i];
         if (L <= 0) continue;
         const hpx = Math.max(1, (L / this.maxLoad) * cs);
@@ -231,7 +248,7 @@ export class OverlayDrawer {
   }
 
   // Direction of directional energies ("away from the source"), on a sparse grid.
-  private drawArrows(ctx: CanvasRenderingContext2D, w: World, s: OverlayState, cs: number): void {
+  private drawArrows(ctx: CanvasRenderingContext2D, w: World, s: OverlayState, cs: number, view: View): void {
     const step = Math.max(1, Math.ceil(14 / cs));
     for (const en of w.rules.energies) {
       if (!en.directional || !s.energies[en.index]) continue;
@@ -245,8 +262,11 @@ export class OverlayDrawer {
       ctx.lineWidth = 1;
       ctx.beginPath();
       const full = step * cs * 0.9;
-      for (let y = Math.floor(step / 2); y < w.height; y += step) {
-        for (let x = Math.floor(step / 2); x < w.width; x += step) {
+      // A fixed grid (multiples of step), so arrows do not shift while scrolling.
+      const ys = Math.floor(view.y0 / step) * step + Math.floor(step / 2);
+      const xs = Math.floor(view.x0 / step) * step + Math.floor(step / 2);
+      for (let y = ys; y < view.y1; y += step) {
+        for (let x = xs; x < view.x1; x += step) {
           const i = y * w.width + x;
           const v = f[i];
           if (v <= max * 0.01) continue;

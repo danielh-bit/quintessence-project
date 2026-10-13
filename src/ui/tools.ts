@@ -25,6 +25,19 @@ export const TOOLS: Array<{ id: ToolId; label: string; key: string; devOnly?: bo
 
 export const BRUSH_SIZES = [1, 2, 3, 5];
 
+/** The grid cell itself first, then its neighbours (for hit tests at drawn positions). */
+const NEAR: Array<[number, number]> = [
+  [0, 0],
+  [-1, 0],
+  [1, 0],
+  [0, -1],
+  [0, 1],
+  [-1, -1],
+  [1, -1],
+  [-1, 1],
+  [1, 1],
+];
+
 /** Velocity per cell of drag, in cells per tick. */
 export const SHOVE_FACTOR = 0.1;
 
@@ -83,6 +96,11 @@ export class Tools {
     this.drag = null;
   }
 
+  /** True while a pointer drag is in progress on the world. */
+  get dragging(): boolean {
+    return this.drag !== null;
+  }
+
   attach(canvas: HTMLCanvasElement): void {
     canvas.addEventListener("contextmenu", (e) => e.preventDefault());
     canvas.addEventListener("pointerdown", (e) => this.down(e, canvas));
@@ -97,8 +115,13 @@ export class Tools {
 
   private down(e: PointerEvent, canvas: HTMLCanvasElement): void {
     if (e.button !== 0 && e.button !== 2) return;
+    // preventDefault keeps the focus where it was: release a focused field so
+    // the keyboard shortcuts work again after clicking the world.
+    const active = document.activeElement;
+    if (active instanceof HTMLInputElement || active instanceof HTMLSelectElement || active instanceof HTMLTextAreaElement) active.blur();
     e.preventDefault();
     canvas.setPointerCapture(e.pointerId);
+    this.app.renderer.pauseFollow();
     const p = this.app.renderer.cellAt(e.clientX, e.clientY);
     this.hover = p;
     const w = this.app.world;
@@ -113,17 +136,21 @@ export class Tools {
       case "bond":
         this.drag = { kind: "rect", x0: p.x, y0: p.y, x1: p.x, y1: p.y };
         break;
-      case "unbond":
-        if (w.bodyAt(p.x, p.y)) w.unbond(p.x, p.y);
+      case "unbond": {
+        const c = this.bodyCellAt(p);
+        if (c) w.unbond(c.x, c.y);
         break;
+      }
       case "shove": {
-        const b = w.bodyAt(p.x, p.y);
+        const c = this.bodyCellAt(p);
+        const b = c ? w.bodyAt(c.x, c.y) : undefined;
         if (b) this.drag = { kind: "shove", bodyId: b.id, fx0: p.fx, fy0: p.fy, fx1: p.fx, fy1: p.fy };
         break;
       }
       case "inspect":
         if (this.app.overlay.enabled) {
-          this.app.select(p.x, p.y);
+          const c = this.bodyCellAt(p) ?? p;
+          this.app.select(c.x, c.y);
           this.drag = { kind: "inspect" };
         }
         break;
@@ -154,10 +181,32 @@ export class Tools {
         d.fx1 = p.fx;
         d.fy1 = p.fy;
         break;
-      case "inspect":
-        this.app.select(p.x, p.y);
+      case "inspect": {
+        const c = this.bodyCellAt(p) ?? p;
+        this.app.select(c.x, c.y);
         break;
+      }
     }
+  }
+
+  /**
+   * The loose cell drawn under a point. Bodies are drawn at their sub-cell
+   * offset (a resting body can keep up to half a cell sideways), so the cell
+   * drawn under the pointer may belong to a neighbouring grid position.
+   * Falls back to a loose cell at the grid position itself.
+   */
+  private bodyCellAt(p: CellPoint): { x: number; y: number } | null {
+    const w = this.app.world;
+    for (const [dx, dy] of NEAR) {
+      const x = p.x + dx;
+      const y = p.y + dy;
+      const b = w.bodyAt(x, y);
+      if (!b) continue;
+      const lx = x + b.ox;
+      const ly = y + b.oy;
+      if (p.fx >= lx && p.fx < lx + 1 && p.fy >= ly && p.fy < ly + 1) return { x, y };
+    }
+    return w.bodyAt(p.x, p.y) ? { x: p.x, y: p.y } : null;
   }
 
   private up(e: PointerEvent, canvas: HTMLCanvasElement): void {
@@ -165,6 +214,7 @@ export class Tools {
     const d = this.drag;
     this.drag = null;
     if (!d) return;
+    this.app.renderer.pauseFollow(800);
     const w = this.app.world;
     if (d.kind === "rect") {
       const cells: Array<[number, number]> = [];

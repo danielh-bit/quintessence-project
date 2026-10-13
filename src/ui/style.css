@@ -150,6 +150,10 @@ input[type="checkbox"] {
   color: var(--muted);
 }
 
+.topbar label.check {
+  color: var(--muted);
+}
+
 .topbar .tick {
   font-variant-numeric: tabular-nums;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -340,9 +344,11 @@ button.elem .key {
 
 /* ---------------------------------------------------------------- stage */
 
+/* The stage scrolls over a sizer as large as the world; the canvas covers
+   only the visible part and sticks to it (it draws at the scroll offset). */
 .stage {
   grid-area: stage;
-  display: flex;
+  display: block;
   overflow: auto;
   min-width: 0;
   min-height: 0;
@@ -350,20 +356,65 @@ button.elem .key {
   position: relative;
 }
 
+.stage .sizer {
+  position: relative;
+}
+
 .stage canvas.world {
-  margin: auto;
+  position: sticky;
+  left: 0;
+  top: 0;
   display: block;
   image-rendering: pixelated;
   cursor: crosshair;
   touch-action: none;
-  box-shadow: 0 0 0 1px #1d212a;
 }
 
-.stage.drop {
-  box-shadow: inset 0 0 0 2px var(--accent);
+.stage.drop canvas.world {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 /* ---------------------------------------------------------------- right panel */
+
+details.section > summary {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+details.section > summary::-webkit-details-marker {
+  display: none;
+}
+
+details.section > summary::before {
+  content: "\25B8";
+  color: var(--muted);
+  font-size: 10px;
+}
+
+details.section[open] > summary::before {
+  content: "\25BE";
+}
+
+details.section > summary h3 {
+  margin: 2px 0 6px;
+}
+
+details.section .current {
+  color: var(--muted);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+details.section[open] .current {
+  display: none;
+}
 
 select.wide,
 button.wide {
@@ -475,7 +526,7 @@ label.check > span {
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: 140px;
+  max-height: 84px;
   overflow-y: auto;
   color: #f0b8e0;
 }

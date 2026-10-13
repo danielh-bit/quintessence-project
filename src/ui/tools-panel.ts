@@ -2,8 +2,10 @@
 // palette. The palette is generated from the loaded rule set.
 //
 // In the player view the palette shows only a swatch and a name (no property
-// is stated). With the developer overlay on, each entry also shows its mass
-// and a tooltip with its trigger and response from the rules.
+// is stated, not even in hidden markup). With the developer overlay on, each
+// entry also shows its mass and a tooltip with its trigger and response from
+// the rules; both are added when the overlay turns on and removed when it
+// turns off.
 
 import type { RuleSet } from "../core";
 import type { App } from "./app";
@@ -32,6 +34,7 @@ export class ToolsPanel {
   readonly el: HTMLElement;
   private readonly toolButtons = new Map<ToolId, HTMLButtonElement>();
   private readonly elementButtons: HTMLButtonElement[] = [];
+  private devShown = false;
   private readonly eraserButton: HTMLButtonElement;
   private readonly fixedButton: HTMLButtonElement;
   private readonly looseButton: HTMLButtonElement;
@@ -63,11 +66,9 @@ export class ToolsPanel {
     const palette = h("div", { class: "palette" });
     rules.elements.forEach((el, index) => {
       if (index === 0) return;
-      const mass = h("span", { class: "mass dev-only", text: `m ${el.mass}` });
       const key = index <= 9 ? h("span", { class: "key", text: String(index) }) : h("span", { class: "key" });
       const b = button("", () => tools.setElement(index), { class: "elem" });
-      b.append(h("span", { class: "swatch", attrs: { style: `background:${el.color}` } }), h("span", { class: "name", text: el.name }), mass, key);
-      b.dataset.devTitle = describeElement(rules, index);
+      b.append(h("span", { class: "swatch", attrs: { style: `background:${el.color}` } }), h("span", { class: "name", text: el.name }), key);
       this.elementButtons[index] = b;
       palette.append(b);
     });
@@ -100,14 +101,26 @@ export class ToolsPanel {
     const dev = this.app.overlay.enabled;
     for (const [id, b] of this.toolButtons) b.classList.toggle("active", t.tool === id);
     this.elementButtons.forEach((b, index) => {
-      if (!b) return;
-      b.classList.toggle("active", t.tool === "paint" && t.element === index);
-      // Element properties are stated only in the developer view.
-      b.title = dev ? (b.dataset.devTitle ?? "") : "";
+      if (b) b.classList.toggle("active", t.tool === "paint" && t.element === index);
     });
+    if (dev !== this.devShown) this.showProperties(dev);
     this.eraserButton.classList.toggle("active", t.tool === "erase");
     this.fixedButton.classList.toggle("active", t.anchored);
     this.looseButton.classList.toggle("active", !t.anchored);
     for (const [n, b] of this.brushButtons) b.classList.toggle("active", t.brush === n);
+  }
+
+  /** Element properties (mass, tooltip) exist only in the developer view. */
+  private showProperties(on: boolean): void {
+    this.devShown = on;
+    const rules = this.app.rules;
+    this.elementButtons.forEach((b, index) => {
+      if (!b) return;
+      b.querySelector(".mass")?.remove();
+      if (on) {
+        b.title = describeElement(rules, index);
+        b.querySelector(".key")?.before(h("span", { class: "mass", text: `m ${rules.elements[index].mass}` }));
+      } else b.removeAttribute("title");
+    });
   }
 }

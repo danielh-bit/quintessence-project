@@ -16,6 +16,8 @@ import { OverlayPanel } from "./overlay-panel";
 import { Perception } from "./perception";
 import { Renderer } from "./renderer";
 import { ScenarioPanel } from "./scenario-panel";
+import { sceneProblem } from "./scene-check";
+import { follow, selectCell, type Selection } from "./selection";
 import { Tools } from "./tools";
 import { ToolsPanel } from "./tools-panel";
 
@@ -24,15 +26,6 @@ export type Source =
   | { kind: "scenario"; id: string; params: Record<string, number> }
   | { kind: "file"; name: string; json: unknown }
   | { kind: "blank"; width: number; height: number };
-
-export interface Selection {
-  x: number;
-  y: number;
-  /** Body followed while it moves (0 = a fixed position). */
-  bodyId: number;
-  /** Index of the selected cell within the body's (sorted) cells. */
-  k: number;
-}
 
 export type AppEvent = "world" | "run" | "overlay" | "tool" | "frame";
 
@@ -58,6 +51,8 @@ export class App {
   speed = 1;
   /** Cell size in px; 0 = fit the view. */
   zoom = 0;
+  /** Keep the view on the largest moving body when the world is larger than the view. */
+  followView = true;
   selection: Selection | null = null;
   /** Events collected after every step (the core keeps only the last step's). */
   readonly eventLog: WorldEvent[] = [];
@@ -125,9 +120,11 @@ export class App {
     this.acc = 0;
     this.selection = null;
     this.eventLog.length = 0;
+    this.eventSerial++; // the event list redraws (now empty)
     this.eventCounts = { degrade: 0, loosen: 0 };
     this.tools.cancel();
     this.renderer.fit();
+    this.renderer.home();
     this.emit("world");
   }
 
@@ -152,10 +149,9 @@ export class App {
   /** Build a world from parsed scene JSON (a loaded file). */
   loadSceneJson(json: unknown, fallbackName: string): boolean {
     try {
-      if (typeof json !== "object" || json === null) throw new Error("scene: expected an object");
-      const o = json as Record<string, unknown>;
-      const problem = sizeProblem(o.width, o.height);
+      const problem = sceneProblem(this.rules, json);
       if (problem) throw new Error(`scene: ${problem}`);
+      const o = json as Record<string, unknown>;
       const world = loadScene(this.rules, json);
       const name = typeof o.name === "string" && o.name.trim() ? o.name.trim() : fallbackName;
       this.setWorld(world, { kind: "file", name, json }, name);
@@ -248,6 +244,12 @@ export class App {
     this.emit("run");
   }
 
+  setFollowView(on: boolean): void {
+    this.followView = on;
+    this.savePrefs();
+    this.emit("run");
+  }
+
   /** Run n ticks, collecting events after each. */
   private advance(n: number): void {
     const t0 = performance.now();
@@ -255,6 +257,7 @@ export class App {
       for (let k = 0; k < n; k++) {
         this.world.step();
         this.stepsDone++;
+        this.followSelection();
         for (const e of this.world.events) {
           this.eventLog.push(e);
           this.eventSerial++;
@@ -333,21 +336,13 @@ export class App {
 
   /** Select a cell for the inspector; a loose cell is followed as its body moves. */
   select(x: number, y: number): void {
-    const w = this.world;
-    if (!w.inBounds(x, y)) return;
-    const b = w.bodyAt(x, y);
-    this.selection = { x, y, bodyId: b ? b.id : 0, k: b ? b.cells.indexOf(w.idx(x, y)) : -1 };
+    if (!this.world.inBounds(x, y)) return;
+    this.selection = selectCell(this.world, x, y);
   }
 
+  /** Keep a followed selection on its cell (after every step and every frame). */
   private followSelection(): void {
-    const s = this.selection;
-    if (!s || s.bodyId === 0) return;
-    const b = this.world.bodies.get(s.bodyId);
-    if (b && s.k >= 0 && s.k < b.cells.length) {
-      const c = b.cells[s.k];
-      s.x = this.world.xOf(c);
-      s.y = this.world.yOf(c);
-    } else s.bodyId = 0;
+    if (this.selection) follow(this.world, this.selection);
   }
 
   // ------------------------------------------------------------------ preferences (per viewer, optional)
@@ -356,8 +351,9 @@ export class App {
     try {
       const raw = window.localStorage.getItem(PREFS_KEY);
       if (!raw) return;
-      const p = JSON.parse(raw) as { speed?: number; energies?: boolean[]; flags?: Record<string, boolean> };
+      const p = JSON.parse(raw) as { speed?: number; follow?: boolean; energies?: boolean[]; flags?: Record<string, boolean> };
       if (typeof p.speed === "number" && SPEEDS.some((s) => s.value === p.speed)) this.speed = p.speed;
+      if (typeof p.follow === "boolean") this.followView = p.follow;
       if (Array.isArray(p.energies) && p.energies.length === this.overlay.energies.length) {
         this.overlay.energies = p.energies.map((v) => v === true);
       }
@@ -374,7 +370,7 @@ export class App {
   private savePrefs(): void {
     try {
       const { enabled: _enabled, energies, ...flags } = this.overlay;
-      window.localStorage.setItem(PREFS_KEY, JSON.stringify({ speed: this.speed, energies, flags }));
+      window.localStorage.setItem(PREFS_KEY, JSON.stringify({ speed: this.speed, follow: this.followView, energies, flags }));
     } catch {
       // Ignore: preferences are a convenience.
     }

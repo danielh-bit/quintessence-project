@@ -2,8 +2,13 @@
 
 import { saveScene, type World } from "../core";
 
-/** Worlds larger than this are refused before anything is allocated. */
-export const MAX_SIDE = 1000;
+/**
+ * Worlds larger than this are refused before anything is allocated. The limit
+ * is mainly the cell count; the per-side cap only keeps a world's one-pixel-
+ * per-cell image within what every browser can allocate as a canvas. It is far
+ * above anything a scenario builds (Runaway's longest track is 4002 cells).
+ */
+export const MAX_SIDE = 16_384;
 export const MAX_CELLS = 250_000;
 
 /** Returns an error message if a world of this size is not allowed, else null. */
@@ -68,23 +73,40 @@ export function pickFile(onFile: (file: File) => void): void {
   input.click();
 }
 
-/** Accept a dropped file on an element (highlighted while dragging over it). */
-export function acceptDrops(target: HTMLElement, onFile: (file: File) => void): void {
+/**
+ * Accept a dropped scene file anywhere on the page (the browser would
+ * otherwise open the file and leave the sandbox). `highlight` gets the class
+ * "drop" while a file is dragged over the window.
+ */
+export function acceptDrops(highlight: HTMLElement, onFile: (file: File) => void): void {
   const hasFiles = (e: DragEvent) => !!e.dataTransfer && [...e.dataTransfer.types].includes("Files");
-  target.addEventListener("dragover", (e) => {
+  // dragenter/dragleave fire for every element crossed: count them.
+  let depth = 0;
+  const clear = () => {
+    depth = 0;
+    highlight.classList.remove("drop");
+  };
+  window.addEventListener("dragenter", (e) => {
+    if (!hasFiles(e)) return;
+    depth++;
+    highlight.classList.add("drop");
+  });
+  window.addEventListener("dragleave", (e) => {
+    if (!hasFiles(e)) return;
+    depth = Math.max(0, depth - 1);
+    if (depth === 0) clear();
+  });
+  window.addEventListener("dragover", (e) => {
     if (!hasFiles(e)) return;
     e.preventDefault();
     if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
-    target.classList.add("drop");
   });
-  target.addEventListener("dragleave", (e) => {
-    if (e.target === target) target.classList.remove("drop");
-  });
-  target.addEventListener("drop", (e) => {
-    target.classList.remove("drop");
+  window.addEventListener("drop", (e) => {
+    clear();
     if (!hasFiles(e)) return;
     e.preventDefault();
     const f = e.dataTransfer?.files[0];
     if (f) onFile(f);
   });
+  window.addEventListener("dragend", clear);
 }

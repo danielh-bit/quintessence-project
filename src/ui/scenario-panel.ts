@@ -1,12 +1,15 @@
 // Scenario picker: every entry of SCENARIOS, its description, a number input
 // per parameter and a Load button. New scenarios appear here automatically.
+// The section folds away while the developer overlay is on (to make room for
+// the inspector); its header still names the scenario and opens it again.
 
-import { SCENARIOS, type Scenario } from "../scenarios";
+import { SCENARIOS, type Scenario, type ScenarioParam } from "../scenarios";
 import type { App } from "./app";
 import { button, h } from "./dom";
 
 export class ScenarioPanel {
-  readonly el: HTMLElement;
+  readonly el: HTMLDetailsElement;
+  private readonly current: HTMLElement;
   private readonly select: HTMLSelectElement;
   private readonly desc: HTMLElement;
   private readonly params: HTMLElement;
@@ -24,7 +27,13 @@ export class ScenarioPanel {
     this.params = h("div", { class: "params" });
     const load = button("Load scenario", () => this.load(), { class: "primary wide", title: "Build this scenario with these parameters" });
 
-    this.el = h("section", { class: "section" }, [h("h3", { text: "Scenario" }), this.select, this.desc, this.params, load]);
+    this.current = h("span", { class: "current" });
+    const summary = h("summary", { title: "Show or hide the scenario picker" }, [h("h3", { text: "Scenario" }), this.current]);
+    this.el = h("details", { class: "section scenario" }, [summary, this.select, this.desc, this.params, load]);
+    this.el.open = !app.overlay.enabled;
+    app.on("overlay", () => {
+      this.el.open = !app.overlay.enabled;
+    });
     if (SCENARIOS.length === 0) {
       this.select.disabled = true;
       load.disabled = true;
@@ -46,6 +55,7 @@ export class ScenarioPanel {
     if (!s) return;
     this.select.value = s.id;
     this.desc.textContent = s.description;
+    this.current.textContent = s.name;
     for (const [key, p] of Object.entries(s.params)) {
       const input = h("input", {
         class: "num",
@@ -65,19 +75,20 @@ export class ScenarioPanel {
     }
   }
 
-  /** Current input values for a scenario if it is the one shown, else null. Clamped to each param's range. */
+  /**
+   * Current input values for a scenario if it is the one shown, else null.
+   * An empty or unreadable box means the default; values are rounded to the
+   * param's step and clamped to its range, and the boxes show what is used.
+   */
   valuesFor(id: string): Record<string, number> | null {
     const s = this.shown;
     if (!s || s.id !== id) return null;
     const out: Record<string, number> = {};
     for (const [key, p] of Object.entries(s.params)) {
-      const raw = Number(this.inputs.get(key)?.value);
-      let v = Number.isFinite(raw) ? raw : p.default;
-      if (v < p.min) v = p.min;
-      if (v > p.max) v = p.max;
-      out[key] = v;
       const input = this.inputs.get(key);
-      if (input && Number(input.value) !== v) input.value = String(v);
+      const v = paramValue(input?.value ?? "", p);
+      out[key] = v;
+      if (input && input.value !== String(v)) input.value = String(v);
     }
     return out;
   }
@@ -87,4 +98,26 @@ export class ScenarioPanel {
     if (!s) return;
     this.app.loadScenario(s.id, this.valuesFor(s.id) ?? {});
   }
+}
+
+/** A param box's text as the value to build with: default if empty, on the step grid, in range. */
+export function paramValue(text: string, p: ScenarioParam): number {
+  const raw = text.trim() === "" ? NaN : Number(text);
+  let v = Number.isFinite(raw) ? raw : p.default;
+  const step = p.step !== undefined && p.step > 0 ? p.step : 1;
+  // Round to the step grid that starts at min (e.g. min 0, step 0.05).
+  v = p.min + Math.round((v - p.min) / step) * step;
+  // Drop float noise (0.1 + 0.2 ...) at the step's precision.
+  v = Number(v.toFixed(decimals(step) + decimals(p.min)));
+  if (v < p.min) v = p.min;
+  if (v > p.max) v = p.max;
+  return v;
+}
+
+/** Digits after the decimal point of a number as written (1e-7 counts 7). */
+function decimals(n: number): number {
+  const [mant, exp] = String(n).split("e");
+  const dot = mant.indexOf(".");
+  const d = (dot < 0 ? 0 : mant.length - dot - 1) - (exp ? Number(exp) : 0);
+  return Math.max(0, Math.min(20, d));
 }

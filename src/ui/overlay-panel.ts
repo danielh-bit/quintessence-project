@@ -1,7 +1,8 @@
 // Right-panel section for the developer overlay: the on/off checkbox (also
 // key D), one layer checkbox per energy from the rules with its colour and the
 // current maximum, the other diagnostic layers, and a stats line.
-// Everything except the on/off checkbox is hidden while the overlay is off.
+// Everything except the on/off checkbox is out of the page while the overlay
+// is off.
 
 import type { App } from "./app";
 import { css, overlayColor, STRAIN_RGB } from "./colors";
@@ -78,7 +79,12 @@ export class OverlayPanel {
   private sync(): void {
     const s = this.app.overlay;
     this.toggle.checked = s.enabled;
-    this.body.hidden = !s.enabled;
+    if (s.enabled && this.body.parentNode !== this.el) this.el.append(this.body);
+    if (!s.enabled && this.body.parentNode === this.el) {
+      this.body.remove();
+      this.stats.textContent = "";
+      for (const m of this.maxLabels) if (m) m.textContent = "";
+    }
     s.energies.forEach((on, i) => {
       if (this.energyInputs[i]) this.energyInputs[i].checked = on;
     });

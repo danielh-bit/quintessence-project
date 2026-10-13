@@ -6,7 +6,7 @@
 // passes time into the core.
 
 import type { App } from "./app";
-import { button, h, setText } from "./dom";
+import { button, checkbox, h, setText } from "./dom";
 import { MAX_SIDE } from "./io";
 
 export const SPEEDS: Array<{ value: number; label: string }> = [
@@ -26,13 +26,14 @@ export const ZOOMS = [0, 2, 3, 4, 6, 8, 12, 16, 24];
 export const HELP =
   "Space play/pause · S or . step · R reset · D developer overlay · " +
   "P paint · E erase · B bond · U unbond · V shove · I inspect (overlay) · " +
-  "1–9 element · F fixed/loose · [ ] brush · right-click or Alt-drag erases · drop a .json scene on the world to load it";
+  "1–9 element · F fixed/loose · [ ] brush · right-click or Alt-drag erases · drop a .json scene on the page to load it";
 
 export class ControlBar {
   readonly el: HTMLElement;
   private readonly playButton: HTMLButtonElement;
   private readonly speedSelect: HTMLSelectElement;
   private readonly zoomSelect: HTMLSelectElement;
+  private readonly followInput: HTMLInputElement;
   private readonly tickLabel: HTMLElement;
   private readonly newW: HTMLInputElement;
   private readonly newH: HTMLInputElement;
@@ -58,6 +59,12 @@ export class ControlBar {
       this.zoomSelect.blur();
     });
 
+    const follow = checkbox("follow", app.followView, (on) => app.setFollowView(on), {
+      class: "follow",
+      title: "When the world is larger than the view, keep the largest moving body in sight",
+    });
+    this.followInput = follow.input;
+
     const reset = button("Reset", () => app.reset(), { title: "Rebuild the current scenario or reload the last file (R)" });
 
     const numberInput = (value: number, title: string) =>
@@ -78,6 +85,7 @@ export class ControlBar {
       h("div", { class: "group" }, [this.playButton, step]),
       h("label", { class: "group lbl" }, [h("span", { text: "ticks/frame" }), this.speedSelect]),
       h("label", { class: "group lbl" }, [h("span", { text: "zoom" }), this.zoomSelect]),
+      h("div", { class: "group" }, [follow.row]),
       h("div", { class: "group" }, [reset]),
       h("div", { class: "group" }, [this.newW, h("span", { class: "x", text: "×" }), this.newH, blank]),
       h("div", { class: "group" }, [save, load]),
@@ -99,6 +107,7 @@ export class ControlBar {
     this.playButton.classList.toggle("running", app.running);
     this.speedSelect.value = String(app.speed);
     this.zoomSelect.value = String(app.zoom);
+    this.followInput.checked = app.followView;
   }
 }
 
@@ -109,6 +118,9 @@ function typingInto(target: EventTarget | null): boolean {
   if (target instanceof HTMLInputElement) return target.type !== "checkbox" && target.type !== "button";
   return false;
 }
+
+/** Keys that act once per press, never on auto-repeat. */
+const TOGGLE_KEYS = new Set([" ", "d", "f", "r"]);
 
 /** Global keyboard shortcuts (ignored while typing in a field). */
 export function installShortcuts(app: App): void {
@@ -133,6 +145,12 @@ export function installShortcuts(app: App): void {
 
     const tools = app.tools;
     const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    // Held keys repeat: toggles and reset act once per press (stepping and
+    // the brush keys may repeat).
+    if (e.repeat && TOGGLE_KEYS.has(key)) {
+      e.preventDefault();
+      return;
+    }
     let handled = true;
     switch (key) {
       case " ":

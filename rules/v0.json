@@ -89,7 +89,7 @@
       "blocks": ["glow"],
       "trigger": { "kind": "exposure", "energy": "teta" },
       "response": { "kind": "emit", "energy": "glow", "gain": 1.5, "threshold": 0.5, "max": 20, "decay": 0 },
-      "strain": { "build": 0.01, "recover": 0.05, "max": 100, "fatigue": 0 },
+      "strain": { "build": 0.005, "recover": 0.05, "max": 100, "fatigue": 0 },
       "degradesTo": null
     },
     "colomium": {
@@ -129,7 +129,7 @@
       "blocks": ["glow"],
       "trigger": { "kind": "exposure", "energy": "glow" },
       "response": { "kind": "emit", "energy": "teta", "gain": 2.0, "threshold": 0.5, "max": 40, "decay": 0 },
-      "strain": { "build": 0.005, "recover": 0.05, "max": 100, "fatigue": 0 },
+      "strain": { "build": 0.001, "recover": 0.05, "max": 100, "fatigue": 0 },
       "degradesTo": null
     },
     "hard_rock": {

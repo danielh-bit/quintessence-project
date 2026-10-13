@@ -47,6 +47,12 @@ The first numbers in `rules/v0.json` were guesses on one scale:
 - **Result:** 0–3 stones buzz at the same 17-tick period. With 5 stones (load 15), the Galog tires below the lift point within about 1400 ticks and the buzz stops, with the weight sitting on a tired, still-emitting Galog. "Overload tires it" is a regularity the player can find.
 - **Side effect to watch:** a loaded Galog is now a strong Teta source (3 stones give 180 at the source). Bormite near it gets thrown out of Teta range instead of hovering, and a Queflair beside it glows at its cap.
 
+### 6. Latch: Queflair strain build 0.01 → 0.005, Ralgen strain build 0.005 → 0.001
+
+- **Seen:** the latch worked with the numbers as they were (off, one pulse → on, blocked → off, memory, re-pulse), but both halves were near their limits after 500 ticks. The Ralgen (output 36) would have burnt out about as soon as the Queflair. §6 says the latch lasts "until the light is blocked or the Queflair burns out", and about 11 s of memory is very short.
+- **Change:** a Queflair glowing at its cap now lasts about 2000 ticks. A Ralgen driven at about 36 now recovers faster than it strains, so it doesn't wear out in a latch.
+- **Regularity that falls out:** the pair only latches when it is close (≤ 2 empty cells). Further apart, the Ralgen's Teta at the Queflair is too weak to keep the loop gain above 1. At 6 cells it is out of Teta range altogether.
+
 ## Results per machine
 
 | Machine | Emerges? | Notes |
@@ -56,3 +62,4 @@ The first numbers in `rules/v0.json` were guesses on one scale:
 | Invisible energy | **Yes** (no tuning needed) | One stone on a Galog is enough to light a Queflair beside it, and Bormite dust within Teta range moves away. With no stones, nothing happens; taking the stones off puts the Queflair out. **Caveat:** after entries 2 and 5 the dust is *flung* rather than drifting: it leaves Teta range at speed and hits the far wall. Gentler drift would need weaker Teta near Galogs (which conflicts with the buzzer's lift condition) or a mass-dependent air drag (a new generic rule, not added). The Queflair burns out after about 1000 ticks at its cap. |
 | Light link | **Yes** (no tuning needed) | A Queflair lit by a loaded Galog makes a Ralgen 30 cells away emit Teta, which pushes a Bormite behind it. The Galog's own Teta (range 5) doesn't get anywhere near. The signal weakens with distance (Ralgen output 29 / 9.7 / 1.9 at 10 / 30 / 38 cells) and is gone beyond Glow's range (40). An unlit lamp sends nothing. |
 | Light switch | **Yes** (no tuning needed) | Shoving a loose Lobime block off a ledge drops it into the beam, and the Ralgen goes quiet within a few ticks. Lifting it out restores the signal. Repeatable, so it's a hand-worked switch. Any opaque block works, since every element blocks Glow in v0; Lobime is just the common stone. |
+| Latch | **Yes** | Dark until one pulse (a stone dropped on a nearby Exgen), then lit long after the Exgen has gone quiet. A Lobime block in the beam turns it off, and it *stays* off after the block is removed, until the next pulse. It goes out for good when the Queflair burns out (about 2000 ticks). Only latches when the pair is close (gap ≤ 2). |

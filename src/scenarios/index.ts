@@ -2,13 +2,14 @@
 import { bouncer } from "./bouncer";
 import { buzzer } from "./buzzer";
 import { invisibleEnergy } from "./invisibleEnergy";
+import { latch } from "./latch";
 import { lightLink, lightSwitch } from "./lightLink";
 import { playground } from "./playground";
 import type { Scenario } from "./types";
 
 export type { Scenario, ScenarioParam } from "./types";
 
-export const SCENARIOS: Scenario[] = [playground, invisibleEnergy, bouncer, buzzer, lightLink, lightSwitch];
+export const SCENARIOS: Scenario[] = [playground, invisibleEnergy, bouncer, buzzer, lightLink, lightSwitch, latch];
 
 export function scenarioById(id: string): Scenario | undefined {
   return SCENARIOS.find((s) => s.id === id);

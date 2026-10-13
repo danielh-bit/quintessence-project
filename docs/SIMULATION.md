@@ -57,7 +57,7 @@ A cell **emits** when its response is `emit` and its output is above 0. Fields a
 
 | Spread | Used by (v0) | How it works |
 | --- | --- | --- |
-| `radial` | Teta | Shortest path over the 8 neighbours (steps of 1 and √2), up to `range` cells. It doesn't enter cells that block it, and a diagonal step can't squeeze between two blockers, so a diagonal Lobime wall seals. Value is `S·(1 − d/(range+1))`. It flows around obstacles (weaker behind them) and through any matter that doesn't block it. |
+| `radial` | Teta | Shortest path over the 8 neighbours (steps of 1 and √2), up to `range` cells. It doesn't enter cells that block it, and a diagonal step isn't allowed past the corner of a blocking cell (if either side cell blocks), so a diagonal Lobime wall seals. Value is `S·(1 − d/(range+1))`. It flows around obstacles (weaker behind them) and through any matter that doesn't block it. |
 | `ray` | Glow | Straight lines of sight. From each source, Bresenham lines run to every cell on the edge of its range square. A ray stops after the first cell that blocks it, and that cell is still lit (the surface the light lands on). Each cell takes a source's light once. Value is `B·(1 − d/(range+1))` with Euclidean `d`. |
 | `conduction` | Hum | Breadth-first through **touching** filled cells (4 neighbours) that don't block it. It never crosses empty space. Long `range`, linear falloff over the path length. Terrain, loose cells and bodies conduct alike when they touch, so dust lying on a humming floor hums too. The **pitch** at a cell is the amplitude-weighted mean of the sources' pitch (a response can give its emission a pitch, `pitch × trigger`; Colomium's rises with its speed). |
 | `diffusion` | Heat | Stored in matter: it is state and travels with moving cells. Emitters add their output to their own cell. Every touching pair of filled, non-blocking cells exchanges `conductivity × difference` (double-buffered, so the result doesn't depend on visiting order), and every cell loses `loss` of its value. Empty space holds nothing. Slow and steady: heat "crawls" along a stone bar. |
@@ -134,4 +134,31 @@ Each link in a chain of effects therefore takes one tick (e.g. Galog loaded → 
 
 `saveScene`/`loadScene` (in `scene.ts`) use one JSON format for hand-made setups and full snapshots: size, seed, tick, a sparse list of cells (element, anchored or body id, plus non-zero state) and the bodies' motion. A snapshot restores the exact state.
 
-*(Energies, triggers, responses and strain are documented as they are built; see the sections below once present.)*
+## Interpretations of the overview (decided at planning time)
+
+- **Who Teta pushes.** §6 lists "is pushed away from the source" as Bormite's response, and the energy table says Teta "pushes light things". The push is implemented as Bormite's *response* (`kind: "push"`), which keeps "one trigger, one response". All the §6 and §7 machines use Bormite as the pushed part. A generic push on all loose matter exists as data (`energies.teta.effects.push`) and is 0.
+- **Composite objects.** The overview speaks of "a weight with a Bormite underside" and "the cart carrying the Colomium". Bonded rigid bodies provide these. Teta's push is local and recoil-free (see above).
+- **What heat and hum do to everything.** "Adds strain to what it touches" and "shakes loose small things" are generic energy effects, not element responses.
+- **Impacts strain what they hit.** This is inferred, not stated (see *Movement, collisions and impacts*). It can be switched off in data.
+- **Degradation result.** `degradesTo: null` (crumbles away) for every element in v0. The data can name another element instead.
+
+## How the §6 machines arise
+
+None of this is code; each machine is a chain of the generic rules above, built from plain blocks in `src/scenarios`:
+
+| Machine | Chain of rules |
+| --- | --- |
+| Bouncer | gravity → *impact* (closing speed) on the Exgen → Exgen *emits* a decaying Teta burst → Bormite *push* away from it (up) → the lid caps the height → gravity. With loop gain > 1, the lid fixes the amplitude, so the beat is steady. A taller drop means a longer fall. Added weight means a slower launch, hence a longer rise. A Queflair within Teta range flashes on each burst. |
+| Buzzer | resting *load* → Galog *emits* Teta ∝ load → Bormite *push* lifts the stack (needs `gain_B · gain_G · falloff(1) > g`, independent of mass) → one cell up means no contact, so the load is 0 and the Galog stops → gravity brings it back. |
+| Runaway engine | body speed → Colomium *emits* hum ∝ speed → conduction through the bonded cart → Sormite *emits* heat → diffusion to the Lyegen → Lyegen *emits* Teta ∝ heat → push on the cart's own Bormite sail (recoil-free) → faster. Heat keeps building, and generic heat strain cracks parts. |
+| Light link | Queflair *emits* Glow (exposure to Teta) → ray to a far Ralgen → Ralgen *emits* Teta at the far end. |
+| Light switch | any cell that blocks Glow in the line ends the ray. |
+| Latch | Queflair (Teta → Glow) and Ralgen (Glow → Teta) close enough that each one's output reaches the other. With loop gain > 1, output caps make "on" stable, and thresholds keep "off" stable. A pulse flips it; blocking the ray drops it to off, which stays off. |
+| Invisible energy | resting *load* → Galog Teta → Queflair glows (exposure) and Bormite is pushed (response), while Teta itself is never drawn in the player view. |
+
+## Scenarios and tests
+
+- `src/scenarios/*` build each setup from plain blocks through the public world API (place, bond, set a velocity). They may name machines; the core may not. The UI's scenario picker and the tests use the same builders, and `scripts/export-scenes.ts` writes them to `scenes/*.json`.
+- Scenario tests (`tests/scenarios/*`) watch only what an outside observer or an instrument could: positions of visible things, the brightness of glowing things, Teta readings at a probe cell, degradation events. They never reach into the response code.
+- `tests/guard.test.ts` fails if `src/core` or `rules/` names a machine, or if the core uses `Math.random` or wall-clock time, or imports anything from outside `src/core`.
+

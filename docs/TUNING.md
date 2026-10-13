@@ -53,6 +53,15 @@ The first numbers in `rules/v0.json` were guesses on one scale:
 - **Change:** a Queflair glowing at its cap now lasts about 2000 ticks. A Ralgen driven at about 36 now recovers faster than it strains, so it doesn't wear out in a latch.
 - **Regularity that falls out:** the pair only latches when it is close (≤ 2 empty cells). Further apart, the Ralgen's Teta at the Queflair is too weak to keep the loop gain above 1. At 6 cells it is out of Teta range altogether.
 
+### 7. Runaway engine: friction 0.5 → 0.2, Sormite gain 0.1 → 0.2, Lyegen gain 1 → 6, Lyegen strain build 0.005 → 0.0005
+
+- **Seen:** the cart (Colomium, Sormite, Lyegen and a Bormite sail on a Lobime base, all bonded) stopped within about 25 ticks of a 0.5 shove. Friction (μ = 0.5) took the speed away long before the hum → heat → Teta chain had warmed up. A pre-heated cart moved, but its Lyegen burnt out from its own output within about 200 ticks.
+- **Sweep** (friction 0.5/0.3/0.2/0.15/0.05 × Lyegen gain 1/3/6 × Sormite gain 0.1/0.2/0.3 × shove 0.3/0.5/1 × pre-heat 0/200, with the broken-loop cart as control):
+  - **Friction 0.5 or 0.3:** no runaway at any gain without a hard shove.
+  - **Friction 0.2 with Lyegen 6 and Sormite 0.2:** a clean runaway. From a 0.5 shove, speed goes 0.25 → 0.86 → 1.64 → 2.0 (the cap) over 400 ticks while the Sormite heats 13 → 35 → 88 → 160 → 310. The Lyegen cracks at about tick 750, then the Sormite, then the Colomium, and the cart falls apart. The same cart with Lobime in place of Sormite stops within about 65 ticks. A 0.3 shove dies out: the loop has a threshold, so it needs a kick.
+  - **Lyegen wear:** its response strain was per unit of output. At outputs near its cap of 100 it burnt out before it overheated. The build was lowered so that what cracks the engine is *overheating* (heat strain), as §6 says.
+- **Friction is world-wide:** shoved blocks now slide about 2.5× further. No other scenario needed changing.
+
 ## Results per machine
 
 | Machine | Emerges? | Notes |
@@ -63,3 +72,14 @@ The first numbers in `rules/v0.json` were guesses on one scale:
 | Light link | **Yes** (no tuning needed) | A Queflair lit by a loaded Galog makes a Ralgen 30 cells away emit Teta, which pushes a Bormite behind it. The Galog's own Teta (range 5) doesn't get anywhere near. The signal weakens with distance (Ralgen output 29 / 9.7 / 1.9 at 10 / 30 / 38 cells) and is gone beyond Glow's range (40). An unlit lamp sends nothing. |
 | Light switch | **Yes** (no tuning needed) | Shoving a loose Lobime block off a ledge drops it into the beam, and the Ralgen goes quiet within a few ticks. Lifting it out restores the signal. Repeatable, so it's a hand-worked switch. Any opaque block works, since every element blocks Glow in v0; Lobime is just the common stone. |
 | Latch | **Yes** | Dark until one pulse (a stone dropped on a nearby Exgen), then lit long after the Exgen has gone quiet. A Lobime block in the beam turns it off, and it *stays* off after the block is removed, until the next pulse. It goes out for good when the Queflair burns out (about 2000 ticks). Only latches when the pair is close (gap ≤ 2). |
+| Runaway engine | **Yes**, given bonded carts and a recoil-free push (your choice at planning time) | After a shove, a bonded cart speeds itself up, its parts heat up continuously, and at about 750 ticks the Lyegen, then the Sormite, then the Colomium crack. Every link is observable: hum at the Sormite, rising heat, Teta at the sail. With Lobime instead of Sormite (loop broken) it coasts to a stop. Too gentle a shove dies out. It needs a long track (about 1200 cells) to overheat before reaching the end. |
+
+## Observations and things to watch
+
+- **Self-propelled Teta carts (recoil-free push).** A Teta source bonded into a body pushes that body's own Bormite and gets no push back. The runaway engine depends on this. It also means *any* bonded Teta source + Bormite sail is a vehicle that needs no track, e.g. a Galog with a stone bonded on top (internal load) and a sail. In v0, Galog fatigue limits such a vehicle to a sustainable trickle, and Lyegen and Exgen need heat or impacts. Watch whether this becomes a boring catch-all for "move things" once needs exist.
+- **Strong Teta near Galog and Exgen.** Entries 2 and 5 made both strong sources, because Bormite is 15× lighter than a stone and the clocks must lift stones. As a result, loose Bormite near a loaded Galog or a hit Exgen is flung out of range rather than drifting. A mass-dependent air drag (a new generic rule) or a softer mass scale (e.g. Bormite 0.5, medium 2) would soften this; neither was added.
+- **A tired Galog's output doesn't depend on its load.** With fatigue 1, a Galog under constant load settles where `build × output = recover`, i.e. output `recover / build` = 100. Light loads below that never tire. Whether "heavier load → same tired output" is a good regularity is a design question.
+- **Bouncer drop height vs Teta range.** For drops shorter than about the Teta range, the burst still reaches the Bormite at the lid and the timing gets irregular. Players will probably find this edge.
+- **The latch needs the pair close** (≤ 2 empty cells); it is a short-range device.
+- **No structural collapse.** Anchored cells never fall, even when everything under them is gone, so "strained rock collapses" (§5) has no rule yet. It would need a support rule for terrain.
+- **Hum doesn't loosen anchored cells in v0** (`loosen.threshold` is null). The generic effect exists and is off.

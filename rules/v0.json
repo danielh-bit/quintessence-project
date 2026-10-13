@@ -5,7 +5,7 @@
     "gravity": 0.04,
     "maxSpeed": 2.0,
     "airDrag": 0.0,
-    "friction": 0.5,
+    "friction": 0.2,
     "restitution": 0.0,
     "minImpact": 0.05,
     "impactStrain": 1.0
@@ -108,7 +108,7 @@
       "mass": 3,
       "blocks": ["glow"],
       "trigger": { "kind": "exposure", "energy": "hum" },
-      "response": { "kind": "emit", "energy": "heat", "gain": 0.1, "threshold": 0.1, "max": 10, "decay": 0 },
+      "response": { "kind": "emit", "energy": "heat", "gain": 0.2, "threshold": 0.1, "max": 10, "decay": 0 },
       "strain": { "build": 0.01, "recover": 0.05, "max": 100, "fatigue": 0 },
       "degradesTo": null
     },
@@ -118,8 +118,8 @@
       "mass": 3,
       "blocks": ["glow"],
       "trigger": { "kind": "exposure", "energy": "heat" },
-      "response": { "kind": "emit", "energy": "teta", "gain": 1.0, "threshold": 0.5, "max": 100, "decay": 0 },
-      "strain": { "build": 0.005, "recover": 0.05, "max": 100, "fatigue": 0 },
+      "response": { "kind": "emit", "energy": "teta", "gain": 6, "threshold": 0.5, "max": 100, "decay": 0 },
+      "strain": { "build": 0.0005, "recover": 0.05, "max": 100, "fatigue": 0 },
       "degradesTo": null
     },
     "ralgen": {

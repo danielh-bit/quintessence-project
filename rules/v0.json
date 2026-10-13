@@ -58,8 +58,8 @@
       "mass": 3,
       "blocks": ["glow"],
       "trigger": { "kind": "pressure" },
-      "response": { "kind": "emit", "energy": "teta", "gain": 1.0, "threshold": 0, "max": 100, "decay": 0 },
-      "strain": { "build": 0.01, "recover": 0.05, "max": 100, "fatigue": 1 },
+      "response": { "kind": "emit", "energy": "teta", "gain": 20, "threshold": 0, "max": 1000, "decay": 0 },
+      "strain": { "build": 0.0005, "recover": 0.05, "max": 100, "fatigue": 1 },
       "degradesTo": null
     },
     "exgen": {

@@ -116,7 +116,9 @@ describe("exposure trigger and the Teta push (Galog -> Queflair, Bormite)", () =
       w.run(4);
       return w.output[w.idx(8, 9)];
     };
-    expect(glow(2)).toBeCloseTo(2 * glow(1), 6);
+    // Small gains so the glow stays below its cap.
+    expect(glow(0.1)).toBeCloseTo(2 * glow(0.05), 6);
+    expect(glow(0.05)).toBeGreaterThan(0);
   });
 });
 

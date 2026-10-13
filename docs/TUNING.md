@@ -37,8 +37,19 @@ The first numbers in `rules/v0.json` were guesses on one scale:
 
 `shaft` now means the free fall above the payload. Previously each stacked stone took a cell of a 1-wide shaft and shortened the drop, which hid the effect of weight (the periods for 0–3 stones were non-monotonic).
 
+### 5. Buzzer: Galog gain 1 → 20 (cap 100 → 1000), Galog strain build 0.01 → 0.0005
+
+- **Seen:** at gain 1, a Galog under a Bormite + Lobime stack made Teta of about 2.7 at the Bormite. The push was about 1% of what lift-off needs, so the stack never moved.
+- **Reasoning:** the Galog's output is proportional to the load, and the push on the stack is proportional to that output. Lift-off therefore needs `Bormite gain × Galog gain × falloff(1) > g`, whatever the weight: Galog gain ≥ 12.
+- **Sweep** (gain 15/20/30 × build 0.0005/0.002/0.01 × weight 1/3): gain 20 buzzes at a steady 17-tick period. Two things broke it:
+  - **The output cap.** At 100 it clipped heavier stacks and stopped them lifting. It was raised to 1000.
+  - **Fast tiring.** With build 0.01 the Galog tired within about 50 beats and the buzz died. At build 0.0005, a Galog under constant load tires toward an output of `recover / build = 100`. A Galog under light loads never tires; one under heavy loads visibly does.
+- **Result:** 0–3 stones buzz at the same 17-tick period. With 5 stones (load 15), the Galog tires below the lift point within about 1400 ticks and the buzz stops, with the weight sitting on a tired, still-emitting Galog. "Overload tires it" is a regularity the player can find.
+- **Side effect to watch:** a loaded Galog is now a strong Teta source (3 stones give 180 at the source). Bormite near it gets thrown out of Teta range instead of hovering, and a Queflair beside it glows at its cap.
+
 ## Results per machine
 
 | Machine | Emerges? | Notes |
 | --- | --- | --- |
 | Bouncer | **Yes** | Steady beat (spread 0). Period grows with drop height (6 → 12 → 20 cells: 23 → 33 → 44 ticks) and with weight (0/1/2 stones: 30/31/36 at a 10-cell drop). 3 stones stop it. The wall Queflair flashes once per beat. Without the Exgen, or with Bormite's push set to 0, it just lands. Regime limit: drops shorter than about the Teta range (5) behave oddly, because the burst still reaches the Bormite at the lid. |
+| Buzzer | **Yes** | Steady 17-tick buzz for 0–3 stones; the Galog's Teta switches on and off with each lift. A plain weight with no Bormite never lifts. The period doesn't depend on the weight: the lift condition is mass-independent, because a heavier weight presses harder. Overloading (5 stones) tires the Galog until it stops. |

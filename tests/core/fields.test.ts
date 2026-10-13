@@ -219,3 +219,38 @@ describe("Heat (diffusion): slow spread through solids", () => {
     expect(w.field[HEAT][w.idx(1, 0)]).toBe(0);
   });
 });
+
+describe("review fixes: fields", () => {
+  it("a one-cell diagonal wall casts a full Glow shadow (no slipping past corners)", () => {
+    const w = makeWorld(21, 21);
+    emitter(w, 4, 4, "queflair", 10);
+    for (let k = 0; k <= 20; k++) w.place(20 - k, k, "lobime", { anchored: true });
+    computeFields(w);
+    for (let y = 12; y < 21; y++) for (let x = 21 - (20 - y) + 1; x < 21; x++) {
+      if (w.elementAt(x, y) === null) expect(w.fieldAt("glow", x, y)).toBe(0);
+    }
+  });
+
+  it("a block right in front of a receiver shades it", () => {
+    const w = makeWorld(40, 9);
+    emitter(w, 3, 4, "queflair", 10);
+    w.place(30, 4, "ralgen", { anchored: true });
+    computeFields(w);
+    expect(w.fieldAt("glow", 30, 4)).toBeGreaterThan(0);
+    w.place(29, 4, "lobime", { anchored: true });
+    computeFields(w);
+    expect(w.fieldAt("glow", 30, 4)).toBe(0);
+  });
+
+  it("an element that reacts to the energy it emits does not excite itself", () => {
+    const rules = rulesWith((j) => {
+      j.elements.lyegen.trigger = { kind: "exposure", energy: "teta" };
+      j.elements.lyegen.response = { kind: "emit", energy: "teta", gain: 5, threshold: 0, max: 100, decay: 0 };
+    });
+    const w = makeWorld(9, 9, rules);
+    w.place(4, 4, "lyegen", { anchored: true });
+    w.output[w.idx(4, 4)] = 1;
+    w.run(5);
+    expect(w.output[w.idx(4, 4)]).toBe(0);
+  });
+});

@@ -30,6 +30,10 @@ export interface Body {
   supported: boolean;
   /** Supported, not moving up, and not above its contact: gravity is held. */
   resting: boolean;
+  /** Rests on terrain or the world floor (set by the support pass). */
+  restsOnTerrain: boolean;
+  /** Loose bodies this body rests on, ascending ids (set by the support pass). */
+  restsOn: number[];
   /** Forces accumulated this tick (cleared after motion). */
   fx: number;
   fy: number;
@@ -209,8 +213,10 @@ export class World {
 
   /**
    * Bond the loose cells at the given positions (and the bodies they belong to)
-   * into rigid bodies. Only cells that touch (4-neighbours) stay together.
-   * Returns the ids of the resulting bodies.
+   * into rigid bodies. Only bodies that touch each other (4-neighbours) are
+   * joined; each joined group shares one momentum-weighted velocity. A selected
+   * body that touches no other selected body is left exactly as it was.
+   * Returns the ids of the resulting bodies (ascending).
    */
   bond(positions: Array<[number, number]>): number[] {
     const ids = new Set<number>();
@@ -221,24 +227,56 @@ export class World {
     }
     if (ids.size === 0) return [];
     const sorted = [...ids].sort((a, b) => a - b);
-    const keep = this.bodies.get(sorted[0])!;
-    let px = keep.vx * keep.mass;
-    let py = keep.vy * keep.mass;
-    for (const id of sorted.slice(1)) {
-      const b = this.bodies.get(id)!;
-      px += b.vx * b.mass;
-      py += b.vy * b.mass;
-      for (const c of b.cells) {
-        this.body[c] = keep.id;
-        keep.cells.push(c);
+    // Union the selected bodies that touch.
+    const parent = new Map<number, number>(sorted.map((id) => [id, id]));
+    const find = (id: number): number => {
+      let r = id;
+      while (parent.get(r) !== r) r = parent.get(r)!;
+      return r;
+    };
+    for (const id of sorted) {
+      for (const c of this.bodies.get(id)!.cells) {
+        for (const n of this.neighbours4(c)) {
+          const o = this.body[n];
+          if (this.elem[n] === 0 || o === 0 || o === id || !ids.has(o)) continue;
+          const a = find(id);
+          const b = find(o);
+          if (a !== b) parent.set(Math.max(a, b), Math.min(a, b));
+        }
       }
-      this.bodies.delete(id);
     }
-    keep.cells.sort((a, b) => a - b);
-    this.recomputeMass(keep);
-    keep.vx = px / keep.mass;
-    keep.vy = py / keep.mass;
-    return this.resplit(keep);
+    const groups = new Map<number, number[]>();
+    for (const id of sorted) {
+      const r = find(id);
+      if (!groups.has(r)) groups.set(r, []);
+      groups.get(r)!.push(id);
+    }
+    const result: number[] = [];
+    for (const group of [...groups.values()].sort((p, q) => p[0] - q[0])) {
+      const keep = this.bodies.get(group[0])!;
+      if (group.length === 1) {
+        result.push(keep.id);
+        continue;
+      }
+      let px = keep.vx * keep.mass;
+      let py = keep.vy * keep.mass;
+      for (const id of group.slice(1)) {
+        const b = this.bodies.get(id)!;
+        px += b.vx * b.mass;
+        py += b.vy * b.mass;
+        for (const c of b.cells) {
+          this.body[c] = keep.id;
+          keep.cells.push(c);
+        }
+        this.bodies.delete(id);
+      }
+      keep.cells.sort((a, b) => a - b);
+      this.recomputeMass(keep);
+      keep.vx = px / keep.mass;
+      keep.vy = py / keep.mass;
+      result.push(...this.resplit(keep));
+    }
+    return result.sort((a, b) => a - b);
   }
 
   /** Break the body at (x, y) back into one-cell bodies. */
@@ -305,6 +343,8 @@ export class World {
       oy: 0,
       supported: false,
       resting: false,
+      restsOnTerrain: false,
+      restsOn: [],
       fx: 0,
       fy: 0,
       jx: 0,

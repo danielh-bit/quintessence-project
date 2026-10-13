@@ -83,12 +83,15 @@ describe("exposure trigger and the Teta push (Galog -> Queflair, Bormite)", () =
     for (let y = 7; y <= 9; y++) w.place(7, y, "lobime");
     w.place(8, 9, "queflair");
     w.place(9, 9, "bormite");
-    w.run(4);
+    // Load -> Galog output -> Teta field -> push takes until tick 2 to show.
+    w.run(2);
+    const [[px, py]] = w.find("bormite");
+    const b = w.bodyAt(px, py)!;
+    expect(b.vx).toBeGreaterThan(0); // away from the Galog: to the right...
+    expect(b.vy).toBeLessThan(0); // ...and up
+    w.run(2);
     expect(w.output[w.idx(8, 9)]).toBeGreaterThan(0);
     expect(w.fieldAt("glow", 8, 9)).toBeGreaterThan(0);
-    // Bormite (very light) is pushed away from the Galog: up and to the right.
-    const b = w.bodyAt(9, 9) ?? [...w.bodies.values()].find((bb) => w.elem[bb.cells[0]] === V0.elementIndex.bormite)!;
-    expect(b.vx).toBeGreaterThanOrEqual(0);
     w.run(100);
     const [[bx, by]] = w.find("bormite");
     expect(Math.hypot(bx - 7, by - 10)).toBeGreaterThan(Math.hypot(9 - 7, 9 - 10));
@@ -150,3 +153,15 @@ describe("generic energy effects", () => {
     expect(w.find("hard_rock").filter(([, y]) => y === 4)[0].join()).toBe(before.r);
   });
 });
+
+describe("generic effects: review fixes", () => {
+  it("loosen with threshold 0 frees nothing where its energy is absent", () => {
+    const rules = rulesWith((j) => (j.energies.hum.effects.loosen = { threshold: 0, maxMass: 10 }));
+    const w = makeWorld(10, 6, rules);
+    floor(w);
+    w.place(4, 2, "queflair", { anchored: true });
+    w.run(20);
+    expect(w.inspect(4, 2)!.anchored).toBe(true);
+  });
+});
+

@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 import { bouncer } from "../../src/scenarios/bouncer";
 import { period, risingEdges } from "../helpers/measure";
-import { brightness, record, where } from "../helpers/observe";
+import { brightness, record, runCollectingEvents, where } from "../helpers/observe";
 import { rulesWith, V0 } from "../helpers/world";
 
 const TICKS = 2000;
@@ -37,11 +37,17 @@ describe("bouncer", () => {
 
   it("the Queflair beside it flashes once per beat", () => {
     const { lands, flashes } = watch({ shaft: 10 });
+    expect(lands.length).toBeGreaterThan(40);
+    expect(flashes.length).toBeGreaterThan(40);
     expect(Math.abs(flashes.length - lands.length)).toBeLessThanOrEqual(1);
-    // Each flash follows a landing within a few ticks.
-    for (const f of flashes.slice(1, 20)) {
+    // Each flash follows a landing within a few ticks, and each landing brings a flash.
+    for (const f of flashes.slice(1, 30)) {
       const before = lands.filter((l) => l <= f).pop()!;
       expect(f - before).toBeLessThanOrEqual(4);
+    }
+    for (const l of lands.slice(1, 30)) {
+      const after = flashes.find((f) => f >= l)!;
+      expect(after - l).toBeLessThanOrEqual(4);
     }
   });
 
@@ -77,5 +83,13 @@ describe("bouncer", () => {
     // With Bormite's push turned off in the data, the bouncer is dead.
     const { lands } = watch({ shaft: 10 }, rulesWith((j) => (j.elements.bormite.response.gain = 0)));
     expect(lands.length).toBe(1);
+  });
+
+  it("the Bormite is durable: after thousands of beats only the Exgen shows wear", () => {
+    const w = bouncer.build(V0, { shaft: 10 });
+    const events = runCollectingEvents(w, 3000);
+    expect(events.filter((e) => e.element === "bormite")).toEqual([]);
+    const ys = record(w, 200, (w) => where(w, "bormite")[0][1]);
+    expect(landings(ys).length).toBeGreaterThan(3);
   });
 });

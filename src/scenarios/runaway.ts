@@ -13,7 +13,7 @@ import { type Scenario, withDefaults } from "./types";
  *   ===========    anchored track
  *
  * `loop = 0` builds the same cart with Lobime instead of Sormite (the loop is
- * broken). `heat` pre-warms the Sormite and Lyegen. `shove` is the starting speed.
+ * broken). `shove` is the starting speed (a push by hand).
  */
 export const runaway: Scenario = {
   id: "runaway",
@@ -23,7 +23,6 @@ export const runaway: Scenario = {
   params: {
     track: { label: "Track length (cells)", default: 1200, min: 40, max: 4000 },
     shove: { label: "Starting speed (cells/tick)", default: 0.5, min: 0, max: 2, step: 0.05 },
-    heat: { label: "Pre-heat of Sormite and Lyegen", default: 0, min: 0, max: 500 },
     loop: { label: "Sormite in the cart (1) or Lobime (0)", default: 1, min: 0, max: 1 },
   },
   build(rules, p) {
@@ -42,11 +41,6 @@ export const runaway: Scenario = {
     w.place(x0 + 2, top, "lyegen");
     w.place(x0 + 3, top, "bormite");
     bondRect(w, x0, top, x0 + 3, base);
-    const heat = rules.energies.find((e) => e.spread === "diffusion");
-    if (heat && q.heat > 0) {
-      w.field[heat.index][w.idx(x0 + 1, top)] = q.heat;
-      w.field[heat.index][w.idx(x0 + 2, top)] = q.heat;
-    }
     w.setVelocity(x0, top, q.shove, 0);
     return w;
   },

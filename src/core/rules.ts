@@ -354,6 +354,15 @@ export function loadRules(json: unknown): RuleSet {
         throw new RulesError(`${path}.response`, "a push response needs an exposure trigger on an energy with a direction (radial or ray)");
       }
     }
+    if (
+      response.kind === "emit" &&
+      trigger.kind === "exposure" &&
+      trigger.energy === response.energy &&
+      energies[response.energy].spread === "diffusion"
+    ) {
+      // A stored energy cannot tell a cell's own deposit apart, so it would excite itself.
+      throw new RulesError(`${path}`, "an element cannot be triggered by a stored (diffusion) energy that it emits itself");
+    }
     if (response.kind !== "none" && trigger.kind === "none") {
       throw new RulesError(`${path}.response`, "an element with a response needs a trigger");
     }

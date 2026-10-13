@@ -55,12 +55,29 @@ The first numbers in `rules/v0.json` were guesses on one scale:
 
 ### 7. Runaway engine: friction 0.5 → 0.2, Sormite gain 0.1 → 0.2, Lyegen gain 1 → 6, Lyegen strain build 0.005 → 0.0005
 
-- **Seen:** the cart (Colomium, Sormite, Lyegen and a Bormite sail on a Lobime base, all bonded) stopped within about 25 ticks of a 0.5 shove. Friction (μ = 0.5) took the speed away long before the hum → heat → Teta chain had warmed up. A pre-heated cart moved, but its Lyegen burnt out from its own output within about 200 ticks.
+- **Seen:** the cart (Colomium, Sormite, Lyegen and a Bormite sail on a Lobime base, all bonded) stopped within about 25 ticks of a 0.5 shove. Friction (μ = 0.5) took the speed away long before the hum → heat → Teta chain had warmed up. A pre-heated cart moved, but its Lyegen burnt out from its own output within about 200 ticks. (The pre-heat was a developer probe that wrote heat into cells directly. It has since been removed from the scenario, which now uses plain blocks and a shove only.)
 - **Sweep** (friction 0.5/0.3/0.2/0.15/0.05 × Lyegen gain 1/3/6 × Sormite gain 0.1/0.2/0.3 × shove 0.3/0.5/1 × pre-heat 0/200, with the broken-loop cart as control):
   - **Friction 0.5 or 0.3:** no runaway at any gain without a hard shove.
   - **Friction 0.2 with Lyegen 6 and Sormite 0.2:** a clean runaway. From a 0.5 shove, speed goes 0.25 → 0.86 → 1.64 → 2.0 (the cap) over 400 ticks while the Sormite heats 13 → 35 → 88 → 160 → 310. The Lyegen cracks at about tick 750, then the Sormite, then the Colomium, and the cart falls apart. The same cart with Lobime in place of Sormite stops within about 65 ticks. A 0.3 shove dies out: the loop has a threshold, so it needs a kick.
   - **Lyegen wear:** its response strain was per unit of output. At outputs near its cap of 100 it burnt out before it overheated. The build was lowered so that what cracks the engine is *overheating* (heat strain), as §6 says.
 - **Friction is world-wide:** shoved blocks now slide about 2.5× further. No other scenario needed changing.
+
+### 8. Review fixes (code, no rule changes)
+
+An adversarial review of the core found real defects. They are fixed in generic code, and every machine was re-measured afterwards, with the same numbers as before:
+
+- **Lifted piles treated as ground.** The "pressing down on a resting pile" rule read a resting flag computed before this tick's forces. A body landing on a stack being lifted by Teta lost its momentum, and the blow fired an Exgen under the stack.
+- **Movement order wasn't local.** It depended on world position and direction, so mirrored or shifted setups gave different results. Now: direction groups, lead order within a group, and struck bodies move right after their striker.
+- **Interlocked bonded hooks** lost their weight on the way down. Load now goes through strongly connected components.
+- **Friction** was against the world frame, so cargo was never dragged by a moving support. It now acts relative to the support, with a shared impulse.
+- **Bond** averaged the velocity of selected bodies that didn't touch each other.
+- **Glow rays** slipped diagonally past the corners of blocking cells.
+- A hidden 32-step cap per tick limited `maxSpeed`.
+- The loader accepted self-exciting stored-energy elements.
+- `loosen` with threshold 0 freed cells the energy never reached.
+- Scene files with bad body or tick values loaded silently.
+
+The tests were also tightened: the runaway must crack by overheating, the bouncer's flash test can no longer pass vacuously, the buzzer period is pinned and shown to be weight-independent, the latch's gap boundary is tested, and the guard is wider. Each was checked to fail when the old behaviour is restored.
 
 ## Results per machine
 
@@ -68,7 +85,7 @@ The first numbers in `rules/v0.json` were guesses on one scale:
 | --- | --- | --- |
 | Bouncer | **Yes** | Steady beat (spread 0). Period grows with drop height (6 → 12 → 20 cells: 23 → 33 → 44 ticks) and with weight (0/1/2 stones: 30/31/36 at a 10-cell drop). 3 stones stop it. The wall Queflair flashes once per beat. Without the Exgen, or with Bormite's push set to 0, it just lands. Regime limit: drops shorter than about the Teta range (5) behave oddly, because the burst still reaches the Bormite at the lid. |
 | Buzzer | **Yes** | Steady 17-tick buzz for 0–3 stones; the Galog's Teta switches on and off with each lift. A plain weight with no Bormite never lifts. The period doesn't depend on the weight: the lift condition is mass-independent, because a heavier weight presses harder. Overloading (5 stones) tires the Galog until it stops. |
-| Invisible energy | **Yes** (no tuning needed) | One stone on a Galog is enough to light a Queflair beside it, and Bormite dust within Teta range moves away. With no stones, nothing happens; taking the stones off puts the Queflair out. **Caveat:** after entries 2 and 5 the dust is *flung* rather than drifting: it leaves Teta range at speed and hits the far wall. Gentler drift would need weaker Teta near Galogs (which conflicts with the buzzer's lift condition) or a mass-dependent air drag (a new generic rule, not added). The Queflair burns out after about 1000 ticks at its cap. |
+| Invisible energy | **Yes** (no tuning needed) | One stone on a Galog is enough to light a Queflair beside it, and Bormite dust within Teta range moves away. With no stones, nothing happens; taking the stones off puts the Queflair out. **Caveat:** after entries 2 and 5 the dust is *flung* rather than drifting: it leaves Teta range at speed and hits the far wall. Gentler drift would need weaker Teta near Galogs (which conflicts with the buzzer's lift condition) or a mass-dependent air drag (a new generic rule, not added). The Queflair burns out after about 2000 ticks at its cap (since entry 6). |
 | Light link | **Yes** (no tuning needed) | A Queflair lit by a loaded Galog makes a Ralgen 30 cells away emit Teta, which pushes a Bormite behind it. The Galog's own Teta (range 5) doesn't get anywhere near. The signal weakens with distance (Ralgen output 29 / 9.7 / 1.9 at 10 / 30 / 38 cells) and is gone beyond Glow's range (40). An unlit lamp sends nothing. |
 | Light switch | **Yes** (no tuning needed) | Shoving a loose Lobime block off a ledge drops it into the beam, and the Ralgen goes quiet within a few ticks. Lifting it out restores the signal. Repeatable, so it's a hand-worked switch. Any opaque block works, since every element blocks Glow in v0; Lobime is just the common stone. |
 | Latch | **Yes** | Dark until one pulse (a stone dropped on a nearby Exgen), then lit long after the Exgen has gone quiet. A Lobime block in the beam turns it off, and it *stays* off after the block is removed, until the next pulse. It goes out for good when the Queflair burns out (about 2000 ticks). Only latches when the pair is close (gap ≤ 2). |

@@ -203,3 +203,128 @@ describe("determinism and scenes", () => {
     ).toThrow(/unknown element/);
   });
 });
+
+describe("review fixes: motion", () => {
+  it("a body landing on a stack that is being lifted is not treated as hitting the ground", () => {
+    const w = makeWorld(5, 8);
+    floor(w);
+    w.place(2, 6, "exgen", { anchored: true });
+    w.place(2, 5, "bormite");
+    w.place(2, 4, "queflair");
+    w.setVelocity(2, 4, 0, 0.3);
+    w.output[w.idx(2, 6)] = 300; // the Exgen has just fired: its Teta lifts the Bormite this tick
+    w.step();
+    // The blow from the Queflair never reaches the Exgen under a rising Bormite.
+    expect(w.impact[w.idx(2, 6)]).toBe(0);
+  });
+
+  it("is mirror-symmetric: a row pushed right behaves like the same row pushed left", () => {
+    const run = (dir: 1 | -1) => {
+      const w = makeWorld(21, 4);
+      floor(w);
+      for (const x of [8, 9, 10]) w.place(dir === 1 ? x : 20 - x, 2, "lobime");
+      w.setVelocity(dir === 1 ? 8 : 12, 2, dir * 1.0, 0);
+      const trace: string[] = [];
+      for (let t = 0; t < 30; t++) {
+        w.step();
+        trace.push(
+          w
+            .find("lobime")
+            .filter(([, y]) => y === 2)
+            .map(([x]) => (dir === 1 ? x : 20 - x))
+            .sort((a, b) => a - b)
+            .join(","),
+        );
+      }
+      return trace;
+    };
+    expect(run(-1)).toEqual(run(1));
+  });
+
+  it("is translation-invariant: the same setup elsewhere in the world gives the same result", () => {
+    const run = (shift: number) => {
+      const w = makeWorld(40, 12);
+      floor(w);
+      w.place(5 + shift, 10, "lobime");
+      w.place(6 + shift, 10, "lobime");
+      w.place(9 + shift, 10, "lobime");
+      w.place(6 + shift, 2, "lobime");
+      w.setVelocity(5 + shift, 10, 0.8, 0);
+      w.setVelocity(9 + shift, 10, -0.8, 0);
+      w.run(40);
+      return w.find("lobime").map(([x, y]) => `${x - shift},${y}`).sort().join(" ");
+    };
+    expect(run(17)).toBe(run(0));
+  });
+
+  it("friction drags loose cargo along with the moving body it rests on", () => {
+    const w = makeWorld(80, 6, rulesWith((j) => (j.world.friction = 0.2)));
+    floor(w);
+    const slab = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+    for (const x of slab) w.place(x, 4, "lobime");
+    w.bond(slab.map((x) => [x, 4] as [number, number]));
+    w.place(9, 3, "queflair");
+    // A gentle shove: friction can only speed the cargo up by mu*g per tick.
+    w.setVelocity(2, 4, 0.3, 0);
+    w.run(80);
+    const [[qx, qy]] = w.find("queflair");
+    expect(qy).toBe(3); // still riding on the slab
+    expect(qx).toBeGreaterThanOrEqual(11); // carried along, not left standing still
+  });
+
+  it("bonding bodies that do not touch leaves them exactly as they were", () => {
+    const w = makeWorld(10, 10);
+    w.place(1, 1, "lobime");
+    w.place(5, 1, "lobime");
+    w.setVelocity(1, 1, 0.3, 0);
+    const a = w.bodyAt(1, 1)!.id;
+    const b = w.bodyAt(5, 1)!.id;
+    w.bond([[1, 1], [5, 1]]);
+    expect(w.bodyAt(1, 1)!.id).toBe(a);
+    expect(w.bodyAt(5, 1)!.id).toBe(b);
+    expect(w.bodyAt(1, 1)!.vx).toBe(0.3);
+    expect(w.bodyAt(5, 1)!.vx).toBe(0);
+  });
+
+  it("speeds above any fixed step budget keep offsets within half a cell", () => {
+    const w = makeWorld(400, 3, rulesWith((j) => (j.world.maxSpeed = 60)));
+    w.place(1, 1, "lobime", { anchored: false });
+    const rules = w.rules;
+    expect(rules.world.maxSpeed).toBe(60);
+    // No gravity effect matters here: give it a fast horizontal start in mid-air.
+    w.setVelocity(1, 1, 50, 0);
+    w.step();
+    const [[x]] = w.find("lobime");
+    expect(x).toBeGreaterThan(40);
+    const b = w.bodyAt(x, w.find("lobime")[0][1])!;
+    expect(Math.abs(b.ox)).toBeLessThanOrEqual(0.5);
+  });
+
+  it("weight on bodies that rest on each other in a loop still reaches the cell below", () => {
+    const w = makeWorld(6, 10);
+    floor(w);
+    w.place(2, 8, "galog", { anchored: true });
+    w.place(2, 7, "lobime");
+    const A: Array<[number, number]> = [[1, 3], [1, 4], [1, 5], [2, 5]];
+    const B: Array<[number, number]> = [[2, 4], [3, 4], [3, 5], [3, 6], [2, 6]];
+    for (const [x, y] of [...A, ...B]) w.place(x, y, "lobime");
+    w.bond(A);
+    w.bond(B);
+    expect(w.bodyAt(1, 3)!.id).not.toBe(w.bodyAt(2, 4)!.id);
+    w.run(3);
+    // Lobime block + hook A (4 cells) + hook B (5 cells), all mass 3.
+    expect(w.load[w.idx(2, 8)]).toBeCloseTo(30, 6);
+  });
+
+  it("refuses malformed body and tick values in a scene", () => {
+    const base = { format: "quintessence-scene", version: 1, width: 4, height: 4 };
+    const cell = { x: 1, y: 1, e: "lobime", b: 1 };
+    expect(() => loadScene(V0, { ...base, cells: [cell], bodies: [{ id: 1, vx: "fast" }] })).toThrow(/vx/);
+    expect(() => loadScene(V0, { ...base, cells: [cell], tick: -5.5 })).toThrow(/tick/);
+    expect(() => loadScene(V0, { ...base, cells: [null] })).toThrow(/object/);
+    expect(() => loadScene(V0, { ...base, cells: [{ x: 1.5, y: 1, e: "lobime" }] })).toThrow(/whole/);
+    expect(() => loadScene(V0, { ...base, cells: [{ x: 1, y: 1, e: "toString" }] })).toThrow(/unknown element/);
+    expect(() => loadScene(V0, { ...base, cells: [cell], bodies: 5 })).toThrow(/bodies/);
+    expect(() => loadScene(V0, { ...base, cells: [cell], bodies: [{ id: 1, ox: 50 }] })).toThrow(/offset/);
+  });
+});

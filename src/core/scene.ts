@@ -105,34 +105,50 @@ function finite(v: unknown, what: string): number {
   return v;
 }
 
+function whole(v: unknown, what: string, min = 0): number {
+  const n = finite(v, what);
+  if (!Number.isInteger(n) || n < min) fail(`${what} must be a whole number >= ${min}`);
+  return n;
+}
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+const MAX_CELLS = 4_000_000;
+
 /** Build a world from a scene (hand-made or a snapshot). */
 export function loadScene(rules: RuleSet, scene: unknown): World {
   if (typeof scene !== "object" || scene === null) fail("expected an object");
   const s = scene as Partial<Scene>;
   if (s.format !== SCENE_FORMAT) fail(`format must be "${SCENE_FORMAT}"`);
   if (s.version !== SCENE_VERSION) fail(`unsupported version ${String(s.version)}`);
-  const width = finite(s.width, "width");
-  const height = finite(s.height, "height");
-  const w = new World(rules, width, height, { seed: s.seed === undefined ? 1 : finite(s.seed, "seed") });
+  const width = whole(s.width, "width", 1);
+  const height = whole(s.height, "height", 1);
+  if (width * height > MAX_CELLS) fail(`a ${width}x${height} world is too large`);
+  const w = new World(rules, width, height, { seed: s.seed === undefined ? 1 : whole(s.seed, "seed") });
   if (!Array.isArray(s.cells)) fail("cells must be a list");
+  if (s.bodies !== undefined && !Array.isArray(s.bodies)) fail("bodies must be a list");
 
   const groups = new Map<number, number[]>();
   const singles: number[] = [];
-  for (const c of s.cells) {
-    const x = finite(c.x, "cell x");
-    const y = finite(c.y, "cell y");
+  for (const c of s.cells as unknown[]) {
+    if (!isRecord(c)) fail("every cell must be an object");
+    const x = whole(c.x, "cell x");
+    const y = whole(c.y, "cell y");
     if (!w.inBounds(x, y)) fail(`cell (${x}, ${y}) is outside the world`);
     const i = w.idx(x, y);
     if (w.elem[i] !== 0) fail(`two cells at (${x}, ${y})`);
-    const el = rules.elementIndex[c.e];
-    if (el === undefined) fail(`unknown element "${c.e}" at (${x}, ${y})`);
+    const el = typeof c.e === "string" && Object.prototype.hasOwnProperty.call(rules.elementIndex, c.e) ? rules.elementIndex[c.e] : undefined;
+    if (el === undefined) fail(`unknown element "${String(c.e)}" at (${x}, ${y})`);
     w.elem[i] = el;
     w.body[i] = 0;
     if (c.s !== undefined) w.strain[i] = finite(c.s, "strain");
     if (c.o !== undefined) w.output[i] = finite(c.o, "output");
     if (c.p !== undefined) w.outPitch[i] = finite(c.p, "pitch");
     if (c.i !== undefined) w.impact[i] = finite(c.i, "impact");
-    if (c.f) {
+    if (c.f !== undefined) {
+      if (!isRecord(c.f)) fail(`stored energies at (${x}, ${y}) must be an object`);
       for (const [eid, v] of Object.entries(c.f)) {
         const en = rules.energies[rules.energyIndex[eid] ?? -1];
         if (!en || en.spread !== "diffusion") fail(`"${eid}" is not a stored (diffusion) energy`);
@@ -141,34 +157,40 @@ export function loadScene(rules: RuleSet, scene: unknown): World {
     }
     if (c.a) continue;
     if (c.b !== undefined) {
-      const id = finite(c.b, "body id");
-      if (!Number.isInteger(id) || id < 1) fail(`body id must be a whole number >= 1`);
+      const id = whole(c.b, "body id", 1);
       if (!groups.has(id)) groups.set(id, []);
       groups.get(id)!.push(i);
     } else singles.push(i);
   }
 
-  const bodyMeta = new Map<number, SceneBody>();
-  for (const b of s.bodies ?? []) bodyMeta.set(finite(b.id, "body id"), b);
+  const bodyMeta = new Map<number, { vx: number; vy: number; ox: number; oy: number }>();
+  for (const b of (s.bodies ?? []) as unknown[]) {
+    if (!isRecord(b)) fail("every body must be an object");
+    const id = whole(b.id, "body id", 1);
+    const opt = (k: "vx" | "vy" | "ox" | "oy") => (b[k] === undefined ? 0 : finite(b[k], `body ${id} ${k}`));
+    const m = { vx: opt("vx"), vy: opt("vy"), ox: opt("ox"), oy: opt("oy") };
+    if (Math.abs(m.ox) > 0.5 || Math.abs(m.oy) > 0.5) fail(`body ${id} offset must be within half a cell`);
+    bodyMeta.set(id, m);
+  }
 
   for (const id of [...groups.keys()].sort((a, b) => a - b)) {
     const b = w.newBody(groups.get(id)!, id);
     const m = bodyMeta.get(id);
     if (m) {
-      b.vx = m.vx ?? 0;
-      b.vy = m.vy ?? 0;
-      b.ox = m.ox ?? 0;
-      b.oy = m.oy ?? 0;
+      b.vx = m.vx;
+      b.vy = m.vy;
+      b.ox = m.ox;
+      b.oy = m.oy;
     }
   }
-  if (s.nextBodyId !== undefined) w.nextBodyId = Math.max(w.nextBodyId, finite(s.nextBodyId, "nextBodyId"));
+  if (s.nextBodyId !== undefined) w.nextBodyId = Math.max(w.nextBodyId, whole(s.nextBodyId, "nextBodyId", 1));
   for (const i of singles) w.newBody([i]);
   // Bonded groups that are not connected fall apart into their parts.
   for (const id of [...groups.keys()].sort((a, b) => a - b)) {
     const b = w.bodies.get(id);
     if (b) w.resplit(b);
   }
-  if (s.tick !== undefined) w.tick = finite(s.tick, "tick");
+  if (s.tick !== undefined) w.tick = whole(s.tick, "tick");
   return w;
 }
 

@@ -1,7 +1,9 @@
 // Ray spread: straight lines of sight. From each source, Bresenham lines run
 // to every cell on the edge of its range square, which reaches every cell in
 // range. A ray stops after the first cell that blocks the energy; that cell is
-// still lit (it is the surface the light lands on). Each cell takes a source's
+// still lit (it is the surface the light lands on). A ray may not slip
+// diagonally past the corner of a blocking cell, so a diagonal wall casts a
+// full shadow. Each cell takes a source's
 // light once (stamped), with linear falloff over Euclidean distance and a
 // direction pointing away from the source.
 
@@ -24,6 +26,10 @@ export function spreadRays(
   const W = w.width;
   const H = w.height;
   const stamp = s.stamp;
+  const blocksAt = (x: number, y: number) => {
+    const c = y * W + x;
+    return elem[c] !== 0 && els[elem[c]].blocks[energy];
+  };
 
   for (const src of sources) {
     const B = w.output[src];
@@ -45,6 +51,8 @@ export function spreadRays(
       let y = sy;
       for (;;) {
         if (x === tx && y === ty) return;
+        const px = x;
+        const py = y;
         const e2 = 2 * err;
         if (e2 > -ady) {
           err -= ady;
@@ -55,6 +63,8 @@ export function spreadRays(
           y += sty;
         }
         if (x < 0 || y < 0 || x >= W || y >= H) return;
+        // A diagonal step may not pass the corner of a blocking cell (as for radial spread).
+        if (x !== px && y !== py && (blocksAt(x, py) || blocksAt(px, y))) return;
         const dx = x - sx;
         const dy = y - sy;
         const d = Math.sqrt(dx * dx + dy * dy);

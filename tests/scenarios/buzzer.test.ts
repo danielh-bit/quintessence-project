@@ -41,10 +41,12 @@ describe("buzzer", () => {
     expect(Math.abs(on.length - lifts.length)).toBeLessThanOrEqual(2);
   });
 
-  it("is a clock of its own: a different period from the bouncer's, set by different rules", () => {
-    const { beat } = watch(1);
-    expect(beat.period).toBeGreaterThan(5);
-    expect(beat.period).toBeLessThan(60);
+  it("is a clock of its own, set by different rules: its period does not depend on the weight", () => {
+    const periods = [0, 1, 2, 3].map((weight) => watch(weight).beat.period);
+    expect(Math.max(...periods) - Math.min(...periods)).toBeLessThanOrEqual(1);
+    // Pinned near its measured value (docs/TUNING.md), and clearly unlike the bouncer's beat.
+    expect(periods[1]).toBeGreaterThan(15);
+    expect(periods[1]).toBeLessThan(19);
   });
 
   it("works with several weights; an overloaded Galog tires until the buzz stops", () => {

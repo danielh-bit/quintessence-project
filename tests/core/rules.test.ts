@@ -54,3 +54,11 @@ describe("rules loader", () => {
     expect(rules.elements[rules.elementIndex.galog].degradesTo).toBe(0);
   });
 });
+
+describe("rules loader: review fixes", () => {
+  it("rejects an element triggered by a stored (diffusion) energy that it emits itself", () => {
+    const bad = cloneRulesJson(v0) as any;
+    bad.elements.sormite.trigger = { kind: "exposure", energy: "heat" };
+    expect(() => loadRules(bad)).toThrow(/stored \(diffusion\) energy/);
+  });
+});

@@ -57,6 +57,8 @@ describe("invisible energy", () => {
       w.step();
       if (w.find("queflair").length === 0) gone = w.tick;
     }
-    expect(gone).toBeGreaterThan(300);
+    // About 2000 ticks at its cap (docs/TUNING.md, entry 6).
+    expect(gone).toBeGreaterThan(1500);
+    expect(gone).toBeLessThan(2500);
   });
 });

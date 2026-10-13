@@ -4,7 +4,7 @@
 // parts are (hot stone changes colour), and what cracks.
 import { describe, expect, it } from "vitest";
 import { runaway } from "../../src/scenarios/runaway";
-import { runCollectingEvents, where } from "../helpers/observe";
+import { where } from "../helpers/observe";
 import { V0 } from "../helpers/world";
 
 type W = ReturnType<typeof runaway.build>;
@@ -52,14 +52,27 @@ describe("runaway engine", () => {
     expect(w.fieldAt("teta", bx, by)).toBeGreaterThan(1);
   });
 
-  it("keeps heating while it runs until parts crack, and then the engine falls apart", () => {
+  it("keeps heating while it runs until it overheats and falls apart", () => {
     const w = runaway.build(V0, { shove: 0.5, track: 1600 });
-    const events = runCollectingEvents(w, 1400);
-    const cracks = events.filter((e) => e.kind === "degrade" && ["lyegen", "sormite", "colomium"].includes(e.element));
-    expect(cracks.length).toBeGreaterThan(0);
-    // It cracked out on the track, not by crashing into the end wall.
-    expect(cracks[0].x).toBeLessThan(1600 - 10);
-    // Without its Lyegen, nothing pushes any more.
+    const cracks: Array<{ tick: number; element: string; x: number; heat: number }> = [];
+    let sormiteHeat = 0;
+    for (let t = 0; t < 1400; t++) {
+      if (where(w, "sormite").length) sormiteHeat = temperature(w, "sormite");
+      w.step();
+      for (const e of w.events) {
+        if (e.kind !== "degrade") continue;
+        cracks.push({ tick: e.tick, element: w.rules.elements[e.element].id, x: e.x, heat: sormiteHeat });
+      }
+    }
+    const engine = cracks.filter((c) => ["lyegen", "sormite", "colomium"].includes(c.element));
+    expect(engine.length).toBeGreaterThanOrEqual(2);
+    // The first part to go cracks late, and hot: overheating, not wear from its own output.
+    expect(engine[0].tick).toBeGreaterThan(500);
+    expect(engine[0].heat).toBeGreaterThan(200);
+    // ...out on the track, not by crashing into the end wall...
+    expect(engine[0].x).toBeLessThan(1600 - 10);
+    // ...and the rest of the engine follows: it falls apart.
+    expect(new Set(engine.map((c) => c.element)).size).toBeGreaterThanOrEqual(2);
     expect(where(w, "lyegen").length).toBe(0);
   });
 

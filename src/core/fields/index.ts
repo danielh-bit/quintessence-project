@@ -4,7 +4,9 @@
 // Non-diffusion fields are rebuilt every tick from the outputs that responses
 // produced last tick. Diffusion fields are stored state that takes one step.
 // `ownField` records what a cell contributed to its own field, so exposure can
-// leave it out (an element never triggers itself).
+// leave it out (an element never triggers itself). A stored (diffusion) energy
+// cannot separate a cell's own deposit, so the rules loader forbids an element
+// from being triggered by a stored energy it emits.
 
 import type { World } from "../world";
 import { spreadConduction } from "./conduction";

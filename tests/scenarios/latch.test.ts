@@ -27,9 +27,19 @@ describe("latch", () => {
       w.step();
       expect(lit(w)).toBe(false);
     }
-    w.run(60); // the stone has landed, the Exgen has fired and gone quiet
+    // Wait for the stone to land, the Exgen to fire, and its Teta to die away
+    // (read just beside the Exgen, on the side away from the pair).
     const [[ex, ey]] = w.find("exgen");
-    expect(w.output[w.idx(ex, ey)]).toBe(0);
+    const burst = () => w.fieldAt("teta", ex - 1, ey - 1);
+    let fired = false;
+    let quiet = -1;
+    for (let t = 0; t < 300 && quiet < 0; t++) {
+      w.step();
+      if (burst() > 100) fired = true;
+      if (fired && burst() < 1) quiet = t;
+    }
+    expect(fired).toBe(true);
+    expect(quiet).toBeGreaterThan(0);
     expect(lit(w)).toBe(true);
     for (let t = 0; t < 800; t++) {
       w.step();
@@ -75,13 +85,20 @@ describe("latch", () => {
     }
     expect(gone).toBeGreaterThan(1000);
     w.run(50);
-    expect(w.output[w.idx(...w.find("ralgen")[0])]).toBe(0);
+    const [[rx, ry]] = w.find("ralgen");
+    expect(w.fieldAt("teta", rx + 1, ry)).toBe(0); // the Ralgen has gone quiet too
   });
 
   it("only latches when the pair is close enough for the Ralgen's Teta to reach back", () => {
     const close = latch.build(V0, { gap: 1 });
     close.run(400);
     expect(lit(close)).toBe(true);
+    const edge = latch.build(V0, { gap: 2 });
+    edge.run(400);
+    expect(lit(edge)).toBe(true);
+    const beyond = latch.build(V0, { gap: 3 });
+    beyond.run(400);
+    expect(lit(beyond)).toBe(false);
     const far = latch.build(V0, { gap: 6 });
     far.run(400);
     expect(lit(far)).toBe(false);

@@ -27,25 +27,26 @@ Each tick a support pass builds the *rests-on* graph: a body rests on whatever i
 
 When integrating velocity, a loose body gets acceleration `a = (0, g) + F/M`, where `F` is the sum of forces from responses and energy effects on its cells.
 
-- For a **resting** body, a downward net acceleration is held by the support (normal force), so the vertical part is dropped. Coulomb friction `μ·normal` acts on the horizontal velocity, with static friction for pushes that are too small. A resting object therefore never "re-falls" a fraction of a cell each tick and never produces fake impacts.
+- For a **resting** body, a downward net acceleration is held by the support (normal force), so the vertical part is dropped. A resting object therefore never "re-falls" a fraction of a cell each tick and never produces fake impacts. A body stops being resting as soon as its velocity points up (pushed or struck from below), so nothing it carries can treat it as solid ground.
+- **Friction** acts *relative to what the body rests on*. Its strength is Coulomb `μ·normal`, the most it can change the body's speed per tick, with static friction when the sliding is small. On terrain, the support stands still. On loose bodies, the impulse is shared equal and opposite, and static friction brings both to a common speed. So cargo on a moving cart is dragged along, up to `μ·g` per tick, rather than left standing.
 - A body that is *not* resting falls freely and loses `airDrag` of its velocity per tick. A body moving up out of a contact feels gravity again at once.
 - Speeds are capped per axis at `world.maxSpeed`.
 
 ## Movement, collisions and impacts
 
-- The offset accumulates the velocity. Whenever `|offset| ≥ 0.5` on an axis, the body tries a one-cell step on the axis with the larger offset (y wins ties). A step succeeds only if **every** destination cell is empty or part of the same body, so nothing tunnels at any speed.
+- The offset accumulates the velocity. Offsets are kept in `(−0.5, 0.5]`: whenever an offset passes +0.5, or reaches −0.5 or below, the body tries a one-cell step on the axis with the larger offset (y wins ties). A step succeeds only if **every** destination cell is empty or part of the same body, so nothing tunnels at any speed. The number of steps per tick is bounded by the offsets themselves, not by a constant, so any `maxSpeed` works.
 - **Contact.** If a body's velocity points into something it already touches, the collision happens at once, whatever the offset. Bodies don't creep into contact over several ticks.
 - **Collision** (a blocked step) is one-dimensional, on that axis.
   - Against terrain or the world's edge, mass is infinite: the velocity becomes `−e·u`, where `e = world.restitution`. The default is 0, so **every bounce in the sandbox comes from Teta, not from elastic collisions**.
   - Against loose bodies, momentum is shared with the combined blocking bodies (1-D collision with restitution).
-  - Pressing **down** on bodies that are resting counts as pressing on the ground. The pile doesn't give way, and the blow is passed down through the pile to the terrain. A stone dropped on a pile that sits on an Exgen is therefore felt by the Exgen. (Without this, a settled stack kept trading tiny bits of momentum forever.)
+  - Pressing **down** on bodies that are resting (and not moving up) counts as pressing on the ground. The pile doesn't give way, and the blow is passed down through the pile to the terrain. A stone dropped on a pile that sits on an Exgen is therefore felt by the Exgen. (Without this, a settled stack kept trading tiny bits of momentum forever.) A pile that is being lifted is *not* ground: momentum is shared, and the Exgen beneath feels nothing.
 - **Impact** = the **closing speed** at contact (`|Δv|` along the axis). It is recorded on both cells of every contact pair, keeping the largest value per tick. Closing speeds below `world.minImpact` count as resting contact. Every impact adds `world.impactStrain × closing speed` of strain to both cells. This is a *generic* rule, not stated in §6: it is inferred from §7's "Hammer" route and from "every pick swing is an impact" (Hard Rock "reacts to nothing directly"). Set it to 0 to switch it off.
   - *Why speed and not momentum?* "A sudden change in motion" is a change of velocity, so an Exgen's burst depends on how fast something hits it, not how heavy it is. This also gives the clean regularity "burst size scales with speed" (§7 "Measure speed"), and it means extra weight makes a pushed payload slower rather than making the burst bigger.
-- **Order.** Bodies move one at a time, leading ones first: they are sorted by the projection of their centre on their own direction of motion, with ties broken by id. The bottom of a falling stack moves before the top, and the top of a rising stack before the bottom.
+- **Order (local).** Only moving bodies take a turn. They are grouped by direction (down, up, right, left, by their larger velocity component), and the groups go in that fixed order. Within a group, bodies move by how far they lead along that direction, centre position, ties by id. The bottom of a falling stack therefore moves before the top, and the top of a rising stack before the bottom. Shifting a setup anywhere in the world doesn't change its outcome. A body struck by another takes its turn **right after** the one that struck it, so a push travels through a row of touching bodies within the same tick, whichever way it points; mirrored setups behave alike. The only remaining direction preference is between groups, e.g. a right-mover and a left-mover contesting the same cell.
 
 ## Weight resting on a cell (load)
 
-`load` is the **static mass** of everything resting on a cell, in mass units. Bodies are processed from the top of each pile down (topological order of the rests-on graph). Each body passes its own mass plus everything it carries, split equally over the cells it rests on. Inside a bonded body, a cell also carries the contiguous same-body cells above it (and whatever rests on them).
+`load` is the **static mass** of everything resting on a cell, in mass units. Bodies are processed from the top of each pile down (topological order of the rests-on graph). Each body passes its own mass plus everything it carries, split equally over the cells it rests on. Inside a bonded body, a cell also carries the contiguous same-body cells above it (and whatever rests on them). Bodies that rest on each other in a loop (interlocked bonded hooks) are treated as one group: the group's whole weight goes to the cells it rests on outside the group. The rests-on graph is processed by strongly connected components, top-down.
 
 *Choice:* load is **not** reduced while a push is lifting the body. If it were (true normal force), a Teta-lifted stack on a Galog would settle into a hover at partial load and could never leave the Galog, so the "weight is lifted → Galog stops → weight drops" cycle could not exist. "Weight resting on it" is read literally: the mass that is resting there.
 
@@ -53,12 +54,12 @@ When integrating velocity, a loose body gets acceleration `a = (0, g) + F/M`, wh
 
 Each energy's `spread` in the data picks one of four algorithms, so the core never knows which energy is Teta. Every element lists the energies it `blocks`. In v0, Lobime blocks all four, and every element blocks Glow (it is opaque), but empty space doesn't.
 
-A cell **emits** when its response is `emit` and its output is above 0. Fields are built in phase 2 from the outputs of the previous tick. `ownField` records what a cell put into its own field, and **exposure** leaves it out, so an element never triggers itself.
+A cell **emits** when its response is `emit` and its output is above 0. Fields are built in phase 2 from the outputs of the previous tick. `ownField` records what a cell put into its own field, and **exposure** leaves it out, so an element never triggers itself. A stored (diffusion) energy can't separate a cell's own deposit from what reached it, so the rules loader refuses an element that is triggered by a stored energy it emits itself.
 
 | Spread | Used by (v0) | How it works |
 | --- | --- | --- |
 | `radial` | Teta | Shortest path over the 8 neighbours (steps of 1 and √2), up to `range` cells. It doesn't enter cells that block it, and a diagonal step isn't allowed past the corner of a blocking cell (if either side cell blocks), so a diagonal Lobime wall seals. Value is `S·(1 − d/(range+1))`. It flows around obstacles (weaker behind them) and through any matter that doesn't block it. |
-| `ray` | Glow | Straight lines of sight. From each source, Bresenham lines run to every cell on the edge of its range square. A ray stops after the first cell that blocks it, and that cell is still lit (the surface the light lands on). Each cell takes a source's light once. Value is `B·(1 − d/(range+1))` with Euclidean `d`. |
+| `ray` | Glow | Straight lines of sight. From each source, Bresenham lines run to every cell on the edge of its range square. A ray stops after the first cell that blocks it, and that cell is still lit (the surface the light lands on). Like a radial step, a ray may not slip diagonally past the corner of a blocking cell, so a one-cell diagonal wall casts a full shadow. Each cell takes a source's light once. Value is `B·(1 − d/(range+1))` with Euclidean `d`. |
 | `conduction` | Hum | Breadth-first through **touching** filled cells (4 neighbours) that don't block it. It never crosses empty space. Long `range`, linear falloff over the path length. Terrain, loose cells and bodies conduct alike when they touch, so dust lying on a humming floor hums too. The **pitch** at a cell is the amplitude-weighted mean of the sources' pitch (a response can give its emission a pitch, `pitch × trigger`; Colomium's rises with its speed). |
 | `diffusion` | Heat | Stored in matter: it is state and travels with moving cells. Emitters add their output to their own cell. Every touching pair of filled, non-blocking cells exchanges `conductivity × difference` (double-buffered, so the result doesn't depend on visiting order), and every cell loses `loss` of its value. Empty space holds nothing. Slow and steady: heat "crawls" along a stone bar. |
 
@@ -129,10 +130,11 @@ Each link in a chain of effects therefore takes one tick (e.g. Galog loaded → 
 - No `Math.random`: the only randomness is `rng.ts`, a pure hash of `(seed, tick, cell, salt)` built from 32-bit integer operations. It has no hidden state, so the order in which numbers are drawn can't matter.
 - The core uses only `+ − × ÷` and `Math.sqrt` on doubles. These are exactly rounded by IEEE 754, so results match across JS engines (important for co-op later). It avoids `exp`, `pow`, `sin` and the like, whose precision differs between engines.
 - `World.stateHash()` hashes the full state (and treats `-0` and `+0` alike). Tests check that two runs, and a snapshot → restore → continue run, end with the same hash.
+- `tests/guard.test.ts` enforces this on the source: no `Math.random`, `Math[...]` or destructuring from `Math`, no `Date`, no engine-dependent maths (`exp`, `log`, `pow`, trig, `hypot`, `cbrt`, `**`) in `src/core`.
 
 ## Scenes
 
-`saveScene`/`loadScene` (in `scene.ts`) use one JSON format for hand-made setups and full snapshots: size, seed, tick, a sparse list of cells (element, anchored or body id, plus non-zero state) and the bodies' motion. A snapshot restores the exact state.
+`saveScene`/`loadScene` (in `scene.ts`) use one JSON format for hand-made setups and full snapshots: size, seed, tick, a sparse list of cells (element, anchored or body id, plus non-zero state) and the bodies' motion. A snapshot restores the exact state. `loadScene` validates everything (whole-number positions and ids, known elements, finite velocities, offsets within half a cell) and fails with a message instead of building a corrupt world.
 
 ## Interpretations of the overview (decided at planning time)
 
@@ -158,7 +160,7 @@ None of this is code; each machine is a chain of the generic rules above, built 
 
 ## Scenarios and tests
 
-- `src/scenarios/*` build each setup from plain blocks through the public world API (place, bond, set a velocity). They may name machines; the core may not. The UI's scenario picker and the tests use the same builders, and `scripts/export-scenes.ts` writes them to `scenes/*.json`.
+- `src/scenarios/*` build each setup from plain blocks through the public world API (place, bond, set a velocity), never by writing internal state. They may name machines; the core may not. The UI's scenario picker and the tests use the same builders, and `scripts/export-scenes.ts` writes them to `scenes/*.json`.
 - Scenario tests (`tests/scenarios/*`) watch only what an outside observer or an instrument could: positions of visible things, the brightness of glowing things, Teta readings at a probe cell, degradation events. They never reach into the response code.
 - `tests/guard.test.ts` fails if `src/core` or `rules/` names a machine, or if the core uses `Math.random` or wall-clock time, or imports anything from outside `src/core`.
 

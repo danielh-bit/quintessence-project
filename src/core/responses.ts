@@ -125,7 +125,7 @@ export function applyEffects(w: World): void {
     if (lt !== null) {
       for (let c = 0; c < w.size; c++) {
         const el = w.elem[c];
-        if (el === 0 || w.body[c] !== 0 || field[c] < lt || els[el].mass > fx.loosen.maxMass) continue;
+        if (el === 0 || w.body[c] !== 0 || field[c] <= 0 || field[c] < lt || els[el].mass > fx.loosen.maxMass) continue;
         w.loosen(c);
         w.events.push({ tick: w.tick, kind: "loosen", x: w.xOf(c), y: w.yOf(c), element: el, into: el });
       }

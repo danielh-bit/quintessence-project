@@ -1,0 +1,76 @@
+# Simulation model (rule set v0 sandbox)
+
+This document explains how the headless core in `src/core` turns the rules in `rules/v0.json` into behaviour, and why each choice was made. The core never names an element, an energy or a machine. Everything it knows about the world's physics arrives as data and is addressed by index.
+
+## Grid and cells
+
+- The world is a 2D side view: `width × height` cells, with row 0 at the top. **+y points down**, the same way as gravity.
+- A cell is empty or holds one element. Per-cell state is stored as parallel typed arrays ("channels").
+  - State that belongs to the matter and **moves with it**: element, body id, strain, response output and pitch, impact, and the stored value of every *diffusion* energy (heat).
+  - State **recomputed every tick**: load, the field of every non-diffusion energy and its direction, and response forces.
+- The edges of the world act like walls of terrain.
+
+## Bodies: anchored terrain, loose cells, bonded groups
+
+- **Anchored** cells (body id 0) are terrain or built structure. They never move. They still take part in everything else: they emit, block, conduct, carry load, feel impacts, strain and degrade.
+- Every **loose** cell belongs to a body with id ≥ 1. A body is a rigid group of cells that only translates. A single loose cell is a one-cell body. In the sandbox the *bond* tool joins touching loose cells into one body, e.g. "a weight with a Bormite underside" or a cart.
+- A body has a velocity `(vx, vy)` in cells per tick, a sub-cell offset `(ox, oy)` in cells, and a mass equal to the sum of its cells' element masses from data.
+- When a cell disappears (it was erased or crumbled away), its body is split into 4-connected parts. The part with the lowest cell index keeps the id; the others get new ids and the same motion.
+- `body.cells` is always kept sorted. Iteration order is canonical, so a saved and restored world sums floats in the same order and continues identically.
+
+## Gravity, support and friction
+
+Each tick a support pass builds the *rests-on* graph: a body rests on whatever is directly below one of its cells. From that graph:
+
+- **Supported**: the body rests on terrain, on the world floor, or on a body that is *resting*. This propagates upward from the terrain until nothing changes.
+- **Resting**: supported, not moving up (`vy ≥ 0`), and not above its contact (`oy ≥ 0`).
+
+When integrating velocity, a loose body gets acceleration `a = (0, g) + F/M`, where `F` is the sum of forces from responses and energy effects on its cells.
+
+- For a **resting** body, a downward net acceleration is held by the support (normal force), so the vertical part is dropped. Coulomb friction `μ·normal` acts on the horizontal velocity, with static friction for pushes that are too small. A resting object therefore never "re-falls" a fraction of a cell each tick and never produces fake impacts.
+- A body that is *not* resting falls freely and loses `airDrag` of its velocity per tick. A body moving up out of a contact feels gravity again at once.
+- Speeds are capped per axis at `world.maxSpeed`.
+
+## Movement, collisions and impacts
+
+- The offset accumulates the velocity. Whenever `|offset| ≥ 0.5` on an axis, the body tries a one-cell step on the axis with the larger offset (y wins ties). A step succeeds only if **every** destination cell is empty or part of the same body, so nothing tunnels at any speed.
+- **Contact.** If a body's velocity points into something it already touches, the collision happens at once, whatever the offset. Bodies don't creep into contact over several ticks.
+- **Collision** (a blocked step) is one-dimensional, on that axis.
+  - Against terrain or the world's edge, mass is infinite: the velocity becomes `−e·u`, where `e = world.restitution`. The default is 0, so **every bounce in the sandbox comes from Teta, not from elastic collisions**.
+  - Against loose bodies, momentum is shared with the combined blocking bodies (1-D collision with restitution).
+  - Pressing **down** on bodies that are resting counts as pressing on the ground. The pile doesn't give way, and the blow is passed down through the pile to the terrain. A stone dropped on a pile that sits on an Exgen is therefore felt by the Exgen. (Without this, a settled stack kept trading tiny bits of momentum forever.)
+- **Impact** = the **closing speed** at contact (`|Δv|` along the axis). It is recorded on both cells of every contact pair, keeping the largest value per tick. Closing speeds below `world.minImpact` count as resting contact. Every impact adds `world.impactStrain × closing speed` of strain to both cells. This is a *generic* rule, not stated in §6: it is inferred from §7's "Hammer" route and from "every pick swing is an impact" (Hard Rock "reacts to nothing directly"). Set it to 0 to switch it off.
+  - *Why speed and not momentum?* "A sudden change in motion" is a change of velocity, so an Exgen's burst depends on how fast something hits it, not how heavy it is. This also gives the clean regularity "burst size scales with speed" (§7 "Measure speed"), and it means extra weight makes a pushed payload slower rather than making the burst bigger.
+- **Order.** Bodies move one at a time, leading ones first: they are sorted by the projection of their centre on their own direction of motion, with ties broken by id. The bottom of a falling stack moves before the top, and the top of a rising stack before the bottom.
+
+## Weight resting on a cell (load)
+
+`load` is the **static mass** of everything resting on a cell, in mass units. Bodies are processed from the top of each pile down (topological order of the rests-on graph). Each body passes its own mass plus everything it carries, split equally over the cells it rests on. Inside a bonded body, a cell also carries the contiguous same-body cells above it (and whatever rests on them).
+
+*Choice:* load is **not** reduced while a push is lifting the body. If it were (true normal force), a Teta-lifted stack on a Galog would settle into a hover at partial load and could never leave the Galog, so the "weight is lifted → Galog stops → weight drops" cycle could not exist. "Weight resting on it" is read literally: the mass that is resting there.
+
+## One tick
+
+`World.step()` always runs these phases in this order:
+
+1. **Support and load**: who rests on what; the weight on each cell.
+2. **Fields**: every non-diffusion energy is recomputed from last tick's outputs, and every diffusion energy takes one step.
+3. **Responses**: each cell's trigger is read (load, its body's speed, last tick's impact, or exposure), and its output is updated with strain build. Push responses produce forces.
+4. **Generic effects**: energy effects on every cell (strain from heat, shaking from hum, ...).
+5. **Strain**: recovery, then degradation of cells at or above their limit (bodies split if needed).
+6. **Motion**: forces are gathered into bodies, support is recomputed, velocities are integrated, bodies move in order, and collisions record impacts for the next tick.
+
+Each link in a chain of effects therefore takes one tick (e.g. Galog loaded → its Teta exists next tick → Queflair glows the tick after). Cells iterate in index order, bodies in id order (or lead order for movement), and sources in cell order.
+
+## Determinism
+
+- One `step()` is one fixed tick; the UI only chooses how many ticks to run per frame.
+- No `Math.random`: the only randomness is `rng.ts`, a pure hash of `(seed, tick, cell, salt)` built from 32-bit integer operations. It has no hidden state, so the order in which numbers are drawn can't matter.
+- The core uses only `+ − × ÷` and `Math.sqrt` on doubles. These are exactly rounded by IEEE 754, so results match across JS engines (important for co-op later). It avoids `exp`, `pow`, `sin` and the like, whose precision differs between engines.
+- `World.stateHash()` hashes the full state (and treats `-0` and `+0` alike). Tests check that two runs, and a snapshot → restore → continue run, end with the same hash.
+
+## Scenes
+
+`saveScene`/`loadScene` (in `scene.ts`) use one JSON format for hand-made setups and full snapshots: size, seed, tick, a sparse list of cells (element, anchored or body id, plus non-zero state) and the bodies' motion. A snapshot restores the exact state.
+
+*(Energies, triggers, responses and strain are documented as they are built; see the sections below once present.)*

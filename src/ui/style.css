@@ -1,0 +1,505 @@
+:root {
+  --bg: #0d0f13;
+  --panel: #14171d;
+  --panel-2: #1b1f27;
+  --line: #262b35;
+  --text: #cfd4de;
+  --muted: #7f8898;
+  --accent: #6aa8ff;
+  --accent-2: #2f5d9e;
+  --danger: #ff6b6b;
+  --ok: #7ad67a;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font: 12px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+#app {
+  height: 100%;
+}
+
+#app.fatal {
+  padding: 24px;
+  color: var(--danger);
+}
+
+.app {
+  display: grid;
+  grid-template-columns: 196px minmax(0, 1fr) 300px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "top top top"
+    "left stage right"
+    "help help help";
+  height: 100vh;
+  min-height: 560px;
+}
+
+/* ---------------------------------------------------------------- controls */
+
+button,
+select,
+input {
+  font: inherit;
+  color: var(--text);
+}
+
+button {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px 9px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+button:hover {
+  border-color: #3a4252;
+  background: #222834;
+}
+
+button.active {
+  background: var(--accent-2);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+button.primary {
+  border-color: var(--accent-2);
+}
+
+button.primary.running {
+  background: #3a2c1a;
+  border-color: #7a5a2a;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+select,
+input.num {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 3px 5px;
+}
+
+input.num {
+  width: 64px;
+}
+
+input[type="checkbox"] {
+  accent-color: var(--accent);
+  margin: 0;
+}
+
+:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ---------------------------------------------------------------- top bar */
+
+.topbar {
+  grid-area: top;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
+}
+
+.topbar .brand {
+  font-weight: 600;
+  color: #e6e9f0;
+  letter-spacing: 0.02em;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
+.topbar .group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.topbar .lbl span {
+  color: var(--muted);
+}
+
+.topbar .x {
+  color: var(--muted);
+}
+
+.topbar .tick {
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #e6e9f0;
+  min-width: 84px;
+}
+
+/* Messages float over the top of the world view (same grid area). */
+.msg {
+  grid-area: stage;
+  align-self: start;
+  justify-self: center;
+  z-index: 2;
+  margin-top: 8px;
+  max-width: min(90%, 760px);
+  display: none;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 5px 8px 5px 10px;
+  border-radius: 5px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+}
+
+.msg.show {
+  display: flex;
+}
+
+.msg.info {
+  background: #17261a;
+  color: var(--ok);
+  border: 1px solid #2a4a2e;
+}
+
+.msg.error {
+  background: #2c1517;
+  color: var(--danger);
+  border: 1px solid #5a2a2e;
+}
+
+.msg-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.msg .msg-close {
+  padding: 0 6px;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 14px;
+}
+
+/* ---------------------------------------------------------------- panels */
+
+.panel {
+  background: var(--panel);
+  overflow-y: auto;
+  padding: 8px 10px 16px;
+  min-height: 0;
+}
+
+.panel.left {
+  grid-area: left;
+  border-right: 1px solid var(--line);
+}
+
+.panel.right {
+  grid-area: right;
+  border-left: 1px solid var(--line);
+}
+
+.panel h3 {
+  margin: 12px 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.panel h3:first-child {
+  margin-top: 2px;
+}
+
+.panel h4 {
+  margin: 10px 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.section + .section {
+  border-top: 1px solid var(--line);
+  margin-top: 10px;
+  padding-top: 2px;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.seg {
+  display: flex;
+  gap: 0;
+}
+
+.seg button {
+  flex: 1;
+  border-radius: 0;
+}
+
+.seg button:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.seg button:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+.seg button + button {
+  border-left: none;
+}
+
+.palette {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+button.elem {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  text-align: left;
+  padding: 3px 6px;
+  background: transparent;
+  border-color: transparent;
+}
+
+button.elem:hover {
+  background: var(--panel-2);
+  border-color: var(--line);
+}
+
+button.elem.active {
+  background: var(--accent-2);
+  border-color: var(--accent);
+}
+
+.swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.swatch.eraser {
+  background: repeating-linear-gradient(45deg, #2a2f3a 0 3px, #11141a 3px 6px);
+}
+
+button.elem .name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+button.elem .mass {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+button.elem .key {
+  color: var(--muted);
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  min-width: 8px;
+  text-align: right;
+}
+
+.app:not(.dev) .dev-only {
+  display: none !important;
+}
+
+/* ---------------------------------------------------------------- stage */
+
+.stage {
+  grid-area: stage;
+  display: flex;
+  overflow: auto;
+  min-width: 0;
+  min-height: 0;
+  background: #08090c;
+  position: relative;
+}
+
+.stage canvas.world {
+  margin: auto;
+  display: block;
+  image-rendering: pixelated;
+  cursor: crosshair;
+  touch-action: none;
+  box-shadow: 0 0 0 1px #1d212a;
+}
+
+.stage.drop {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+/* ---------------------------------------------------------------- right panel */
+
+select.wide,
+button.wide {
+  width: 100%;
+}
+
+.desc {
+  color: var(--muted);
+  margin: 6px 0 8px;
+}
+
+.params {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.param {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.param input.num {
+  width: 70px;
+}
+
+label.check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 2px 0;
+  user-select: none;
+}
+
+label.check > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.dev-toggle {
+  font-weight: 600;
+  color: #e6e9f0;
+}
+
+.layers .layer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.layers .spread {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.layers .max,
+.stats,
+.kv .v,
+.events {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.layers .max {
+  color: var(--muted);
+}
+
+.flags {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 6px;
+}
+
+.stats {
+  margin-top: 8px;
+  padding: 5px 6px;
+  border-radius: 4px;
+  background: var(--panel-2);
+  color: #b9c2d2;
+}
+
+.kv {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1px 8px;
+}
+
+.kv .k {
+  color: var(--muted);
+}
+
+.kv .k.field {
+  color: #9fb4d6;
+}
+
+.kv .v {
+  color: #e6e9f0;
+  word-break: break-word;
+}
+
+.events {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 140px;
+  overflow-y: auto;
+  color: #f0b8e0;
+}
+
+.events li.none {
+  color: var(--muted);
+}
+
+/* ---------------------------------------------------------------- help */
+
+.help {
+  grid-area: help;
+  padding: 4px 10px;
+  color: var(--muted);
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+}
+
+@media (max-width: 1100px) {
+  .app {
+    grid-template-columns: 176px minmax(0, 1fr) 260px;
+  }
+  .topbar .brand {
+    display: none;
+  }
+}

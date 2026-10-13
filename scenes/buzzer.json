@@ -1,0 +1,121 @@
+{
+ "format": "quintessence-scene",
+ "version": 1,
+ "name": "Buzzer (second clock)",
+ "description": "A Lobime weight with a Bormite underside, resting on a Galog in the floor. The weight presses the Galog, its Teta lifts the weight, the Galog stops, the weight drops: watch it buzz.",
+ "rules": "v0",
+ "width": 15,
+ "height": 15,
+ "seed": 1,
+ "tick": 0,
+ "nextBodyId": 3,
+ "cells": [
+  {
+   "x": 7,
+   "y": 12,
+   "e": "lobime",
+   "b": 1
+  },
+  {
+   "x": 7,
+   "y": 13,
+   "e": "bormite",
+   "b": 1
+  },
+  {
+   "x": 0,
+   "y": 14,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 1,
+   "y": 14,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 2,
+   "y": 14,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 3,
+   "y": 14,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 4,
+   "y": 14,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 5,
+   "y": 14,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 6,
+   "y": 14,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 7,
+   "y": 14,
+   "e": "galog",
+   "a": true
+  },
+  {
+   "x": 8,
+   "y": 14,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 9,
+   "y": 14,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 10,
+   "y": 14,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 11,
+   "y": 14,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 12,
+   "y": 14,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 13,
+   "y": 14,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 14,
+   "y": 14,
+   "e": "hard_rock",
+   "a": true
+  }
+ ],
+ "bodies": [
+  {
+   "id": 1
+  }
+ ]
+}

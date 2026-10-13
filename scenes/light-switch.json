@@ -1,0 +1,343 @@
+{
+ "format": "quintessence-scene",
+ "version": 1,
+ "name": "Light switch",
+ "description": "The light link with a Lobime block on a ledge above the beam. Shove the block (Shove tool) so it slides off into the beam and the Ralgen goes quiet; erase it and the signal comes back.",
+ "rules": "v0",
+ "width": 44,
+ "height": 14,
+ "seed": 1,
+ "tick": 0,
+ "nextBodyId": 4,
+ "cells": [
+  {
+   "x": 18,
+   "y": 9,
+   "e": "lobime",
+   "b": 3
+  },
+  {
+   "x": 15,
+   "y": 10,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 16,
+   "y": 10,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 17,
+   "y": 10,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 18,
+   "y": 10,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 3,
+   "y": 12,
+   "e": "lobime",
+   "b": 1
+  },
+  {
+   "x": 4,
+   "y": 12,
+   "e": "queflair",
+   "a": true
+  },
+  {
+   "x": 34,
+   "y": 12,
+   "e": "ralgen",
+   "a": true
+  },
+  {
+   "x": 35,
+   "y": 12,
+   "e": "bormite",
+   "b": 2
+  },
+  {
+   "x": 0,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 1,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 2,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 3,
+   "y": 13,
+   "e": "galog",
+   "a": true
+  },
+  {
+   "x": 4,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 5,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 6,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 7,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 8,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 9,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 10,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 11,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 12,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 13,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 14,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 15,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 16,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 17,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 18,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 19,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 20,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 21,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 22,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 23,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 24,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 25,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 26,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 27,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 28,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 29,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 30,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 31,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 32,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 33,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 34,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 35,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 36,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 37,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 38,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 39,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 40,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 41,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 42,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 43,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  }
+ ],
+ "bodies": [
+  {
+   "id": 1
+  },
+  {
+   "id": 2
+  },
+  {
+   "id": 3
+  }
+ ]
+}

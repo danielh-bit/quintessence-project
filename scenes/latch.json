@@ -1,0 +1,217 @@
+{
+ "format": "quintessence-scene",
+ "version": 1,
+ "name": "Latch (memory)",
+ "description": "A Queflair and a Ralgen facing each other, dark. A stone falls on the Exgen nearby: one pulse, and the pair lights up and stays lit. Put a Lobime block between them and they go dark, and stay dark when you take it away, until the next pulse.",
+ "rules": "v0",
+ "width": 30,
+ "height": 24,
+ "seed": 1,
+ "tick": 0,
+ "nextBodyId": 2,
+ "cells": [
+  {
+   "x": 10,
+   "y": 14,
+   "e": "lobime",
+   "b": 1
+  },
+  {
+   "x": 12,
+   "y": 22,
+   "e": "queflair",
+   "a": true
+  },
+  {
+   "x": 15,
+   "y": 22,
+   "e": "ralgen",
+   "a": true
+  },
+  {
+   "x": 0,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 1,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 2,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 3,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 4,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 5,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 6,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 7,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 8,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 9,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 10,
+   "y": 23,
+   "e": "exgen",
+   "a": true
+  },
+  {
+   "x": 11,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 12,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 13,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 14,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 15,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 16,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 17,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 18,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 19,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 20,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 21,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 22,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 23,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 24,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 25,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 26,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 27,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 28,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 29,
+   "y": 23,
+   "e": "hard_rock",
+   "a": true
+  }
+ ],
+ "bodies": [
+  {
+   "id": 1
+  }
+ ]
+}

@@ -1,0 +1,259 @@
+{
+ "format": "quintessence-scene",
+ "version": 1,
+ "name": "Bouncer (pulse)",
+ "description": "A Bormite dropped down a closed shaft onto an Exgen. Watch it bounce, and the Queflair in the wall flash on every beat. Try a taller shaft or added weight.",
+ "rules": "v0",
+ "width": 11,
+ "height": 15,
+ "seed": 1,
+ "tick": 0,
+ "nextBodyId": 2,
+ "cells": [
+  {
+   "x": 4,
+   "y": 1,
+   "e": "lobime",
+   "a": true
+  },
+  {
+   "x": 5,
+   "y": 1,
+   "e": "lobime",
+   "a": true
+  },
+  {
+   "x": 6,
+   "y": 1,
+   "e": "lobime",
+   "a": true
+  },
+  {
+   "x": 4,
+   "y": 2,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 5,
+   "y": 2,
+   "e": "bormite",
+   "b": 1
+  },
+  {
+   "x": 6,
+   "y": 2,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 4,
+   "y": 3,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 6,
+   "y": 3,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 4,
+   "y": 4,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 6,
+   "y": 4,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 4,
+   "y": 5,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 6,
+   "y": 5,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 4,
+   "y": 6,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 6,
+   "y": 6,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 4,
+   "y": 7,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 6,
+   "y": 7,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 4,
+   "y": 8,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 6,
+   "y": 8,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 4,
+   "y": 9,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 6,
+   "y": 9,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 4,
+   "y": 10,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 6,
+   "y": 10,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 4,
+   "y": 11,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 6,
+   "y": 11,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 4,
+   "y": 12,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 6,
+   "y": 12,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 4,
+   "y": 13,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 5,
+   "y": 13,
+   "e": "exgen",
+   "a": true
+  },
+  {
+   "x": 6,
+   "y": 13,
+   "e": "queflair",
+   "a": true
+  },
+  {
+   "x": 0,
+   "y": 14,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 1,
+   "y": 14,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 2,
+   "y": 14,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 3,
+   "y": 14,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 4,
+   "y": 14,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 5,
+   "y": 14,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 6,
+   "y": 14,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 7,
+   "y": 14,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 8,
+   "y": 14,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 9,
+   "y": 14,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 10,
+   "y": 14,
+   "e": "hard_rock",
+   "a": true
+  }
+ ],
+ "bodies": [
+  {
+   "id": 1
+  }
+ ]
+}

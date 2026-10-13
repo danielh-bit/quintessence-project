@@ -1,0 +1,271 @@
+{
+ "format": "quintessence-scene",
+ "version": 1,
+ "name": "Invisible energy",
+ "description": "A Galog in the floor with stones piled on it, a Queflair beside the pile and Bormite dust on the floor. Nothing visible connects them, yet the Queflair lights up and the dust drifts away. Take the stones off and it all stops.",
+ "rules": "v0",
+ "width": 32,
+ "height": 16,
+ "seed": 1,
+ "tick": 0,
+ "nextBodyId": 8,
+ "cells": [
+  {
+   "x": 12,
+   "y": 12,
+   "e": "lobime",
+   "b": 3
+  },
+  {
+   "x": 12,
+   "y": 13,
+   "e": "lobime",
+   "b": 2
+  },
+  {
+   "x": 11,
+   "y": 14,
+   "e": "queflair",
+   "b": 4
+  },
+  {
+   "x": 12,
+   "y": 14,
+   "e": "lobime",
+   "b": 1
+  },
+  {
+   "x": 14,
+   "y": 14,
+   "e": "bormite",
+   "b": 5
+  },
+  {
+   "x": 15,
+   "y": 14,
+   "e": "bormite",
+   "b": 6
+  },
+  {
+   "x": 16,
+   "y": 14,
+   "e": "bormite",
+   "b": 7
+  },
+  {
+   "x": 0,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 1,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 2,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 3,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 4,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 5,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 6,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 7,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 8,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 9,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 10,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 11,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 12,
+   "y": 15,
+   "e": "galog",
+   "a": true
+  },
+  {
+   "x": 13,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 14,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 15,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 16,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 17,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 18,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 19,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 20,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 21,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 22,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 23,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 24,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 25,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 26,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 27,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 28,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 29,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 30,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  },
+  {
+   "x": 31,
+   "y": 15,
+   "e": "hard_rock",
+   "a": true
+  }
+ ],
+ "bodies": [
+  {
+   "id": 1
+  },
+  {
+   "id": 2
+  },
+  {
+   "id": 3
+  },
+  {
+   "id": 4
+  },
+  {
+   "id": 5
+  },
+  {
+   "id": 6
+  },
+  {
+   "id": 7
+  }
+ ]
+}

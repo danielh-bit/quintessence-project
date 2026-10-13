@@ -68,8 +68,8 @@
       "mass": 3,
       "blocks": ["glow"],
       "trigger": { "kind": "impact" },
-      "response": { "kind": "emit", "energy": "teta", "gain": 60, "threshold": 0.1, "max": 200, "decay": 0.6 },
-      "strain": { "build": 0.002, "recover": 0.01, "max": 100, "fatigue": 0 },
+      "response": { "kind": "emit", "energy": "teta", "gain": 1500, "threshold": 0.1, "max": 5000, "decay": 0.6 },
+      "strain": { "build": 0.0001, "recover": 0.01, "max": 100, "fatigue": 0 },
       "degradesTo": null
     },
     "bormite": {
@@ -78,8 +78,8 @@
       "mass": 0.2,
       "blocks": ["glow"],
       "trigger": { "kind": "exposure", "energy": "teta" },
-      "response": { "kind": "push", "gain": 0.002, "threshold": 0, "max": 100, "decay": 0 },
-      "strain": { "build": 0.001, "recover": 0.05, "max": 100, "fatigue": 0 },
+      "response": { "kind": "push", "gain": 0.004, "threshold": 0, "max": 100, "decay": 0 },
+      "strain": { "build": 0.001, "recover": 0.2, "max": 200, "fatigue": 0 },
       "degradesTo": null
     },
     "queflair": {

@@ -100,3 +100,4 @@ The tests were also tightened: the runaway must crack by overheating, the bounce
 - **The latch needs the pair close** (≤ 2 empty cells); it is a short-range device.
 - **No structural collapse.** Anchored cells never fall, even when everything under them is gone, so "strained rock collapses" (§5) has no rule yet. It would need a support rule for terrain.
 - **Hum doesn't loosen anchored cells in v0** (`loosen.threshold` is null). The generic effect exists and is off.
+- **Falloff shape is fixed in code.** Data sets each energy's strength and range, but the shape is always linear, `1 − d/(range+1)`, with a hard cut past the range. Lift conditions depend on it: the buzzer needs `gain_B · gain_G · falloff(1) > g`, with falloff(1) = 5/6. If designers want a different reach profile, add an optional per-energy edge value whose default reproduces today's. The 8 shake directions and the neighbour stencils are likewise fixed parts of the algorithms.

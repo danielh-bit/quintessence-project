@@ -124,7 +124,7 @@ describe("generic energy effects", () => {
   it("heat adds strain to whatever holds it, even elements with no trigger", () => {
     const w = makeWorld(5, 5);
     w.place(2, 2, "hard_rock", { anchored: true });
-    w.field[V0.energyIndex.heat][w.idx(2, 2)] = 50;
+    w.field[V0.energyIndex.heat][w.idx(2, 2)] = 500; // hot enough to out-pace recovery
     w.step();
     expect(w.strain[w.idx(2, 2)]).toBeGreaterThan(0);
   });

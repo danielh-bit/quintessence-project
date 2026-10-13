@@ -96,6 +96,20 @@ Effects each energy has on *every* cell it reaches, whatever the element (`energ
 - `loosen`: anchored cells with mass ≤ `maxMass`, where the field reaches `threshold`, become loose. Set to `null` (off) in v0.
 - `push`: a force on all loose matter along the field direction. It's 0 in v0 (see above).
 
+## Strain
+
+```
+each tick:  strain += build · output          (phase 3, every response)
+                    + effects.strain · field   (phase 4, e.g. heat)
+                    + impactStrain · closing   (phase 6, every impact)
+            strain  = max(0, strain − recover) (phase 5)
+            strain ≥ max  →  degrade
+```
+
+- **Recovery is constant.** An element at rest, or one responding only lightly, recovers. So a Queflair that only flashes can wear more slowly than one that glows steadily (§7 "strobe lamp"). This falls out of the rule; it isn't special-cased.
+- **Fatigue.** `fatigue` (0..1) weakens the response as strain rises. With `fatigue = 1`, output reaches 0 at the limit, so an element under constant load settles where `build · output = recover`, just below breaking. That is Galog: it "tires under long load, recovers when unloaded". (A consequence of the formula: a fully tired Galog's steady output is `recover / build`, whatever its load.)
+- **Degradation.** At or above `strain.max` the cell turns into `degradesTo`: another element, or `null`, meaning it crumbles away and the cell becomes empty. A body that loses a cell falls apart into its connected parts, and things resting on a crumbled cell fall. Every degradation is reported in `world.events` (the UI and tests use this).
+
 ## One tick
 
 `World.step()` always runs these phases in this order:

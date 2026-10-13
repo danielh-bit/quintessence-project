@@ -133,5 +133,25 @@ export function applyEffects(w: World): void {
   }
 }
 
-/** Strain recovery and degradation. */
-export function applyStrain(_w: World): void {}
+/**
+ * Strain recovery and degradation. Recovery is constant, so an element that
+ * rests (or responds only lightly) recovers; at or above its limit an element
+ * degrades into `degradesTo` (0 = it crumbles away), and a body that loses a
+ * cell falls apart into its connected parts.
+ */
+export function applyStrain(w: World): void {
+  const els = w.rules.elements;
+  for (let c = 0; c < w.size; c++) {
+    const el = w.elem[c];
+    if (el === 0) continue;
+    const st = els[el].strain;
+    let s = w.strain[c] - st.recover;
+    if (s < 0) s = 0;
+    w.strain[c] = s;
+    if (s >= st.max) {
+      const into = els[el].degradesTo;
+      w.events.push({ tick: w.tick, kind: "degrade", x: w.xOf(c), y: w.yOf(c), element: el, into });
+      w.transmute(c, into);
+    }
+  }
+}

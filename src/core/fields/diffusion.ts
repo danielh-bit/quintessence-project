@@ -6,7 +6,7 @@
 // surroundings. Empty space holds and passes nothing.
 
 import type { World } from "../world";
-import type { Scratch } from "./scratch";
+import type { Scratch, Sources } from "./scratch";
 
 export function spreadDiffusion(
   w: World,
@@ -14,7 +14,7 @@ export function spreadDiffusion(
   energy: number,
   conductivity: number,
   loss: number,
-  sources: number[],
+  sources: Sources,
   field: Float64Array,
 ): void {
   const els = w.rules.elements;
@@ -23,7 +23,7 @@ export function spreadDiffusion(
   const H = w.height;
   const holds = (c: number) => elem[c] !== 0 && !els[elem[c]].blocks[energy];
 
-  for (const src of sources) if (holds(src)) field[src] += w.output[src];
+  for (let k = 0; k < sources.cells.length; k++) if (holds(sources.cells[k])) field[sources.cells[k]] += sources.strength[k];
 
   const next = s.buf2;
   next.set(field);

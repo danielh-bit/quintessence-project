@@ -5,17 +5,19 @@
 // mean of the pitch of the sources reaching it.
 
 import type { World } from "../world";
-import { falloff, type Scratch } from "./scratch";
+import { falloff, type Scratch, type Sources } from "./scratch";
 
 export function spreadConduction(
   w: World,
   s: Scratch,
   energy: number,
   range: number,
-  sources: number[],
+  sources: Sources,
   field: Float64Array,
   own: Float64Array,
   pitch: Float64Array,
+  outside: Float64Array,
+  leaked: Float64Array,
 ): void {
   const els = w.rules.elements;
   const elem = w.elem;
@@ -26,9 +28,12 @@ export function spreadConduction(
   const pitchSum = s.buf;
   pitchSum.fill(0);
 
-  for (const src of sources) {
-    const A = w.output[src];
-    const p = w.outPitch[src];
+  for (let k = 0; k < sources.cells.length; k++) {
+    const src = sources.cells[k];
+    const A = sources.strength[k];
+    const p = sources.pitch[k];
+    const fromOutside = k >= sources.firstOutside;
+    const fromCarried = !fromOutside && k >= sources.firstCarried;
     let head = 0;
     let tail = 0;
     dist[src] = 0;
@@ -38,6 +43,8 @@ export function spreadConduction(
       const d = dist[c];
       const val = A * falloff(d, range);
       field[c] += val;
+      if (fromOutside) outside[c] += val;
+      else if (fromCarried) leaked[c] += val;
       pitchSum[c] += val * p;
       if (c === src) own[c] += val;
       if (d + 1 > range) continue;
@@ -54,7 +61,7 @@ export function spreadConduction(
       if (x < W - 1) tryN(c + 1);
       if (y < H - 1) tryN(c + W);
     }
-    for (let k = 0; k < tail; k++) dist[q[k]] = Infinity;
+    for (let j = 0; j < tail; j++) dist[q[j]] = Infinity;
   }
   for (let c = 0; c < field.length; c++) pitch[c] = field[c] > 0 ? pitchSum[c] / field[c] : 0;
 }

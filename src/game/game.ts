@@ -6,6 +6,9 @@
 // only acts on the world through the core's outside actions (push, kick,
 // strike), the way a hand would.
 //
+// The pack is a small grid of its own, carried by the body (a carried grid of
+// the core). It runs on the same rules, moves with the body and weighs on it.
+//
 // Everything here is deterministic: `step(input)` applies the input and
 // advances the world one tick.
 
@@ -59,7 +62,28 @@ export class Game {
     }
     for (const [cx, cy] of cells) world.place(cx, cy, element);
     const ids = world.bond(cells);
+
+    // The pack: walls and dividers from the picture, fixed in place.
+    const { layout, legend, ports } = config.pack;
+    const pack = new World(world.rules, layout[0].length, layout.length, { seed: world.seed + 1 });
+    layout.forEach((row, py) => {
+      [...row].forEach((ch, px) => {
+        if (ch !== ".") pack.place(px, py, legend[ch], { anchored: true });
+      });
+    });
+    world.attach(pack, ports.map(([dx, dy]): [number, number] => [x + dx, y + dy]));
     return new Game(world, config, ids[0]);
+  }
+
+  /** The pack's grid: a world of its own, read and edited like any other. */
+  get pack(): World {
+    return this.world.carried[0].world;
+  }
+
+  /** Whether a pack cell is room for contents (not a wall or divider of the layout). */
+  isPackRoom(x: number, y: number): boolean {
+    const row = this.config.pack.layout[y];
+    return row !== undefined && row[x] === ".";
   }
 
   /** The actor's body, or undefined if it no longer exists. */
@@ -167,7 +191,9 @@ export class Game {
     if (typeof s !== "object" || s === null || s.format !== GAME_FORMAT) throw new Error(`game: format must be "${GAME_FORMAT}"`);
     if (s.version !== GAME_VERSION) throw new Error(`game: unsupported version ${String(s.version)}`);
     if (!Number.isInteger(s.body) || !Number.isInteger(s.cooldown)) throw new Error("game: body and cooldown must be whole numbers");
-    const g = new Game(loadScene(rules, s.scene), config, s.body as number);
+    const world = loadScene(rules, s.scene);
+    if (world.carried.length === 0) throw new Error("game: the scene has no pack");
+    const g = new Game(world, config, s.body as number);
     g.cooldown = s.cooldown as number;
     return g;
   }

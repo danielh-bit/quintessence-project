@@ -9,6 +9,7 @@
 //
 // See docs/SIMULATION.md for the model and the order of phases in a tick.
 
+import { type Carried, carriedMass, type Edge, edgeFor, type FieldSource, stepCarried } from "./carried";
 import { computeFields } from "./fields/index";
 import { applyMotion } from "./motion";
 import { applyEffects, applyResponses, applyStrain } from "./responses";
@@ -44,7 +45,8 @@ export interface Body {
 
 export interface WorldEvent {
   tick: number;
-  kind: "degrade" | "loosen";
+  /** "transfer": a cell arrived here from a grid carried in this one. */
+  kind: "degrade" | "loosen" | "transfer";
   x: number;
   y: number;
   /** Element index before the event. */
@@ -96,6 +98,28 @@ export class World {
   readonly forceX: Float64Array;
   readonly forceY: Float64Array;
 
+  /** Part of the field at a cell that came from outside this grid (only a carried grid has any). */
+  readonly outsideField: Float64Array[];
+  /** Part of the field at a cell that grids carried in this one let out. */
+  readonly leakedField: Float64Array[];
+
+  // --- carried grids (see carried.ts) ---
+  /** Grids that ride on bodies of this one. */
+  readonly carried: Carried[] = [];
+  /** Velocity of this grid itself, if something carries it (0 for a grid that stands still). */
+  frameVx = 0;
+  frameVy = 0;
+  /** Change of velocity every loose body here gets in the coming tick because the grid's own motion changed. */
+  frameJx = 0;
+  frameJy = 0;
+  /** What reaches this grid from the grid that carries it, for the coming tick. */
+  inbound: FieldSource[] = [];
+  /** How the edge of this grid is handled; null = the edges are walls. */
+  edge: Edge | null = null;
+  /** Sum of the forces on this grid's loose bodies in the last motion phase. */
+  passFx = 0;
+  passFy = 0;
+
   readonly bodies = new Map<number, Body>();
   nextBodyId = 1;
   /** Events from the last step (degradations, cells shaken loose). */
@@ -123,6 +147,8 @@ export class World {
     this.forceY = new Float64Array(n);
     this.field = rules.energies.map(() => new Float64Array(n));
     this.ownField = rules.energies.map(() => new Float64Array(n));
+    this.outsideField = rules.energies.map(() => new Float64Array(n));
+    this.leakedField = rules.energies.map(() => new Float64Array(n));
     this.dirX = rules.energies.map((e) => (e.directional ? new Float64Array(n) : null));
     this.dirY = rules.energies.map((e) => (e.directional ? new Float64Array(n) : null));
     this.pitch = rules.energies.map((e) => (e.spread === "conduction" ? new Float64Array(n) : null));
@@ -398,10 +424,68 @@ export class World {
     return b;
   }
 
+  /** A body's mass: its cells, plus everything in grids it carries. */
   recomputeMass(b: Body): void {
     let m = 0;
     for (const c of b.cells) m += this.rules.elements[this.elem[c]].mass;
+    if (this.carried.length > 0) m += carriedMass(this, b);
     b.mass = m;
+  }
+
+  /** Mass of every cell in this grid (and in grids carried in it). */
+  totalMass(): number {
+    let m = 0;
+    for (let i = 0; i < this.size; i++) if (this.elem[i] !== 0) m += this.rules.elements[this.elem[i]].mass;
+    for (const c of this.carried) m += c.world.totalMass();
+    return m;
+  }
+
+  // ------------------------------------------------------------------ carried grids
+
+  /**
+   * Attach a grid to this one, to be carried by the body its first opening
+   * cell belongs to. `ports` are the opening cells in this grid, as [x, y].
+   * The carried grid is stepped as part of this grid's tick from now on.
+   */
+  attach(child: World, ports: Array<[number, number]>): Carried {
+    if (child === this || child.edge !== null) throw new Error("a grid can be carried by one grid only");
+    if (child.rules !== this.rules) throw new Error("a carried grid must use the same rules");
+    if (ports.length === 0) throw new Error("a carried grid needs at least one opening");
+    const cells = ports.map(([x, y]) => {
+      if (!this.inBounds(x, y)) throw new Error(`opening (${x}, ${y}) is outside the world`);
+      return this.idx(x, y);
+    });
+    const c: Carried = { world: child, ports: cells, lastVx: 0, lastVy: 0, leak: [], fx: 0, fy: 0 };
+    this.carried.push(c);
+    child.edge = edgeFor(this, c);
+    const carrier = this.bodyAt(ports[0][0], ports[0][1]);
+    if (carrier) {
+      c.lastVx = carrier.vx;
+      c.lastVy = carrier.vy;
+      this.recomputeMass(carrier);
+    }
+    return c;
+  }
+
+  /**
+   * Move the matter in cell `i` of another grid into the empty cell `j` of
+   * this one, with everything that belongs to it (strain, output, stored
+   * energies). It arrives as a loose one-cell body at rest.
+   */
+  takeCell(from: World, i: number, j: number): Body {
+    if (from.rules !== this.rules) throw new Error("both grids must use the same rules");
+    if (from.elem[i] === 0) throw new Error("there is nothing in the cell to move");
+    if (this.elem[j] !== 0) throw new Error("the destination cell is not empty");
+    this.elem[j] = from.elem[i];
+    this.strain[j] = from.strain[i];
+    this.output[j] = from.output[i];
+    this.outPitch[j] = from.outPitch[i];
+    this.impact[j] = from.impact[i];
+    const mine = this.diffusionFields();
+    const theirs = from.diffusionFields();
+    for (let f = 0; f < mine.length; f++) mine[f][j] = theirs[f][i];
+    from.removeCell(i);
+    return this.newBody([j]);
   }
 
   /**
@@ -490,6 +574,13 @@ export class World {
    */
   translateBody(b: Body, dx: number, dy: number): void {
     const delta = dy * this.width + dx;
+    // Openings of carried grids travel with the body they are part of.
+    for (const c of this.carried) {
+      for (let k = 0; k < c.ports.length; k++) {
+        const p = c.ports[k];
+        if (this.elem[p] !== 0 && this.body[p] === b.id) c.ports[k] = p + delta;
+      }
+    }
     const diff = this.diffusionFields();
     const n = b.cells.length;
     const el = new Uint8Array(n);
@@ -537,6 +628,7 @@ export class World {
    *   4. generic effects     (energy effects on every cell, e.g. strain, shaking)
    *   5. strain              (recovery, degradation, body splits)
    *   6. motion              (gravity, forces, moves, collisions -> impacts)
+   *   7. carried grids       (each grid riding on a body here takes its own tick)
    */
   step(): void {
     this.events = [];
@@ -546,6 +638,7 @@ export class World {
     applyEffects(this);
     applyStrain(this);
     applyMotion(this);
+    if (this.carried.length > 0) stepCarried(this);
     this.tick++;
   }
 
@@ -637,6 +730,15 @@ export class World {
     bodyState[k++] = this.tick;
     bodyState[k++] = this.nextBodyId;
     f64(bodyState);
+    for (const c of this.carried) {
+      const state = [c.ports.length, ...c.ports, c.lastVx, c.lastVy, c.fx, c.fy];
+      for (const l of c.leak) state.push(l.energy, l.strength, l.pitch);
+      f64(new Float64Array(state));
+      const inner = c.world.stateHash();
+      const bytes = new Uint8Array(inner.length);
+      for (let n = 0; n < inner.length; n++) bytes[n] = inner.charCodeAt(n);
+      eat(bytes);
+    }
     return (hash32(h, this.tick, this.size, this.seed) >>> 0).toString(16).padStart(8, "0") + h.toString(16).padStart(8, "0");
   }
 }

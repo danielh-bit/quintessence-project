@@ -6,7 +6,7 @@
 // source to the cell), weighted by that value. Opposite sources cancel.
 
 import type { World } from "../world";
-import { falloff, type Scratch } from "./scratch";
+import { falloff, type Scratch, type Sources } from "./scratch";
 
 const SQRT2 = Math.SQRT2;
 const DX = [1, -1, 0, 0, 1, 1, -1, -1];
@@ -18,11 +18,13 @@ export function spreadRadial(
   s: Scratch,
   energy: number,
   range: number,
-  sources: number[],
+  sources: Sources,
   field: Float64Array,
   own: Float64Array,
   dirX: Float64Array,
   dirY: Float64Array,
+  outside: Float64Array,
+  leaked: Float64Array,
 ): void {
   const els = w.rules.elements;
   const elem = w.elem;
@@ -33,8 +35,11 @@ export function spreadRadial(
   const hc = s.heapCell;
   const hk = s.heapKey;
 
-  for (const src of sources) {
-    const S = w.output[src];
+  for (let k = 0; k < sources.cells.length; k++) {
+    const src = sources.cells[k];
+    const S = sources.strength[k];
+    const fromOutside = k >= sources.firstOutside;
+    const fromCarried = !fromOutside && k >= sources.firstCarried;
     const sx = w.xOf(src);
     const sy = w.yOf(src);
     // Dijkstra with a binary heap (lazy deletion).
@@ -99,6 +104,8 @@ export function spreadRadial(
       const c = s.visited[v];
       const val = S * falloff(dist[c], range);
       field[c] += val;
+      if (fromOutside) outside[c] += val;
+      else if (fromCarried) leaked[c] += val;
       if (c === src) {
         own[c] += val;
       } else {

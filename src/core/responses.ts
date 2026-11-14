@@ -3,7 +3,7 @@
 // Every element has one trigger and one response (GAME_OVERVIEW §6). The
 // trigger value x is read from the world:
 //   pressure  -> load on the cell (static resting mass)
-//   motion    -> speed of the cell's body (0 if anchored)
+//   motion    -> speed of the cell: its body's, plus that of a grid being carried
 //   impact    -> largest closing speed the cell felt last tick
 //   exposure  -> the energy's field at the cell, minus the cell's own emission
 // and the response output follows, the same way for every element:
@@ -43,11 +43,17 @@ export function applyResponses(w: World): void {
         x = w.load[c];
         break;
       case "motion": {
+        // Speed of the cell: its body's velocity in this grid, plus the
+        // velocity of the grid itself if something carries it.
+        let vx = w.frameVx;
+        let vy = w.frameVy;
         const id = w.body[c];
         if (id !== 0) {
           const b = w.bodies.get(id)!;
-          x = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+          vx += b.vx;
+          vy += b.vy;
         }
+        x = Math.sqrt(vx * vx + vy * vy);
         break;
       }
       case "impact":

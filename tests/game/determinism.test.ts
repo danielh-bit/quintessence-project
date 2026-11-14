@@ -18,7 +18,13 @@ function site(): Game {
   for (const x of [28, 29]) w.place(x, fy - 1, "lobime");
   w.place(28, fy - 2, "colomium");
   for (let y = fy - 5; y < fy; y++) w.place(50, y, "hard_rock", { anchored: true });
-  return Game.create(w, PLAYER, 30, topRow(fy));
+  const g = Game.create(w, PLAYER, 30, topRow(fy));
+  // Things in the pack that react to motion, Teta and impact as the player moves about.
+  g.pack.place(1, 3, "colomium");
+  g.pack.place(2, 3, "bormite");
+  g.pack.place(4, 3, "queflair");
+  g.pack.place(5, 3, "exgen");
+  return g;
 }
 
 /** A made-up but fixed input sequence: wandering, jumping, swinging at things nearby. */
@@ -54,14 +60,18 @@ describe("determinism", () => {
     const b = new Recorder(site());
     const start = a.game.bounds()!.x;
     let moved = false;
+    let stirred = false;
     for (let t = 0; t < 600; t++) {
       a.step(script(a.game, t));
       b.step(script(b.game, t));
       if (a.game.bounds()!.x !== start) moved = true;
+      if (a.game.pack.find("bormite")[0]?.[1] !== 3) stirred = true;
       if (t % 50 === 0) expect(b.game.stateHash()).toBe(a.game.stateHash());
     }
     expect(moved).toBe(true);
     expect(a.recording.inputs.some((i) => i.swing !== null)).toBe(true);
+    // The pack took part: its contents were thrown about.
+    expect(stirred).toBe(true);
   });
 
   it("a different input gives a different world (the hash is not blind to the player)", () => {

@@ -6,7 +6,8 @@ import type { RuleSet } from "./rules";
 import { World } from "./world";
 
 export const SCENE_FORMAT = "quintessence-scene";
-export const SCENE_VERSION = 1;
+/** Version 2 adds carried grids. A scene without any is still written as version 1. */
+export const SCENE_VERSION = 2;
 
 export interface SceneCell {
   x: number;
@@ -37,6 +38,21 @@ export interface SceneBody {
   oy?: number;
 }
 
+/** A grid carried by a body of the scene's world (see carried.ts). */
+export interface SceneCarried {
+  /** Opening cells in the parent, as [x, y]. */
+  ports: Array<[number, number]>;
+  scene: Scene;
+  /** The carrier's velocity when the grid was last stepped. */
+  vx?: number;
+  vy?: number;
+  /** Force its contents passed to the carrier for the coming tick. */
+  fx?: number;
+  fy?: number;
+  /** What it let out when last stepped: [energy id, strength, pitch]. */
+  leak?: Array<[string, number, number]>;
+}
+
 export interface Scene {
   format: typeof SCENE_FORMAT;
   version: number;
@@ -51,6 +67,7 @@ export interface Scene {
   nextBodyId?: number;
   cells: SceneCell[];
   bodies?: SceneBody[];
+  carried?: SceneCarried[];
 }
 
 /** Snapshot the full state of a world. */
@@ -81,9 +98,9 @@ export function saveScene(w: World, meta: { name?: string; description?: string 
     if (b.oy !== 0) sb.oy = b.oy;
     return sb;
   });
-  return {
+  const scene: Scene = {
     format: SCENE_FORMAT,
-    version: SCENE_VERSION,
+    version: w.carried.length > 0 ? SCENE_VERSION : 1,
     ...meta,
     rules: w.rules.version,
     width: w.width,
@@ -94,6 +111,18 @@ export function saveScene(w: World, meta: { name?: string; description?: string 
     cells,
     bodies,
   };
+  if (w.carried.length > 0) {
+    scene.carried = w.carried.map((c) => {
+      const sc: SceneCarried = { ports: c.ports.map((p) => [w.xOf(p), w.yOf(p)]), scene: saveScene(c.world) };
+      if (c.lastVx !== 0) sc.vx = c.lastVx;
+      if (c.lastVy !== 0) sc.vy = c.lastVy;
+      if (c.fx !== 0) sc.fx = c.fx;
+      if (c.fy !== 0) sc.fy = c.fy;
+      if (c.leak.length > 0) sc.leak = c.leak.map((l) => [w.rules.energies[l.energy].id, l.strength, l.pitch]);
+      return sc;
+    });
+  }
+  return scene;
 }
 
 function fail(msg: string): never {
@@ -122,7 +151,7 @@ export function loadScene(rules: RuleSet, scene: unknown): World {
   if (typeof scene !== "object" || scene === null) fail("expected an object");
   const s = scene as Partial<Scene>;
   if (s.format !== SCENE_FORMAT) fail(`format must be "${SCENE_FORMAT}"`);
-  if (s.version !== SCENE_VERSION) fail(`unsupported version ${String(s.version)}`);
+  if (s.version !== 1 && s.version !== SCENE_VERSION) fail(`unsupported version ${String(s.version)}`);
   const width = whole(s.width, "width", 1);
   const height = whole(s.height, "height", 1);
   if (width * height > MAX_CELLS) fail(`a ${width}x${height} world is too large`);
@@ -191,6 +220,36 @@ export function loadScene(rules: RuleSet, scene: unknown): World {
     if (b) w.resplit(b);
   }
   if (s.tick !== undefined) w.tick = whole(s.tick, "tick");
+
+  if (s.carried !== undefined) {
+    if (!Array.isArray(s.carried)) fail("carried must be a list");
+    for (const entry of s.carried as unknown[]) {
+      if (!isRecord(entry)) fail("every carried grid must be an object");
+      if (!Array.isArray(entry.ports) || entry.ports.length === 0) fail("a carried grid needs a list of openings");
+      const ports = (entry.ports as unknown[]).map((p): [number, number] => {
+        if (!Array.isArray(p) || p.length !== 2) fail("an opening must be [x, y]");
+        const x = whole(p[0], "opening x");
+        const y = whole(p[1], "opening y");
+        if (!w.inBounds(x, y)) fail(`opening (${x}, ${y}) is outside the world`);
+        return [x, y];
+      });
+      const c = w.attach(loadScene(rules, entry.scene), ports);
+      const opt = (k: "vx" | "vy" | "fx" | "fy") => (entry[k] === undefined ? 0 : finite(entry[k], `carried ${k}`));
+      c.lastVx = opt("vx");
+      c.lastVy = opt("vy");
+      c.fx = opt("fx");
+      c.fy = opt("fy");
+      if (entry.leak !== undefined) {
+        if (!Array.isArray(entry.leak)) fail("leak must be a list");
+        for (const l of entry.leak as unknown[]) {
+          if (!Array.isArray(l) || l.length !== 3 || typeof l[0] !== "string") fail("a leak must be [energy, strength, pitch]");
+          const en = rules.energies[rules.energyIndex[l[0]] ?? -1];
+          if (!en || en.spread === "diffusion") fail(`"${l[0]}" is not an energy a grid can let out`);
+          c.leak.push({ energy: en.index, strength: finite(l[1], "leak strength"), pitch: finite(l[2], "leak pitch") });
+        }
+      }
+    }
+  }
   return w;
 }
 

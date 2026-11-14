@@ -13,7 +13,8 @@ import { spreadConduction } from "./conduction";
 import { spreadDiffusion } from "./diffusion";
 import { spreadRadial } from "./radial";
 import { spreadRays } from "./rays";
-import { scratchFor } from "./scratch";
+import { scratchFor, type Sources } from "./scratch";
+import { carriedSources } from "../carried";
 
 /** For each element index, the energy index its response emits (or -1). */
 function emitTable(w: World): Int32Array {
@@ -31,16 +32,36 @@ export function computeFields(w: World): void {
     emits = emitTable(w);
     tables.set(w.rules, emits);
   }
-  const sources: number[][] = w.rules.energies.map(() => []);
+  const sources: Sources[] = w.rules.energies.map(() => ({ cells: [], strength: [], pitch: [], firstCarried: 0, firstOutside: 0 }));
   for (let c = 0; c < w.size; c++) {
     const e = emits[w.elem[c]];
-    if (e >= 0 && w.output[c] > 0) sources[e].push(c);
+    if (e >= 0 && w.output[c] > 0) {
+      sources[e].cells.push(c);
+      sources[e].strength.push(w.output[c]);
+      sources[e].pitch.push(w.outPitch[c]);
+    }
+  }
+  // What grids carried inside this one let out, at their openings.
+  for (const so of sources) so.firstCarried = so.cells.length;
+  for (const src of carriedSources(w)) {
+    sources[src.energy].cells.push(src.cell);
+    sources[src.energy].strength.push(src.strength);
+    sources[src.energy].pitch.push(src.pitch);
+  }
+  // What reaches this grid from the grid that carries it.
+  for (const so of sources) so.firstOutside = so.cells.length;
+  for (const src of w.inbound) {
+    sources[src.energy].cells.push(src.cell);
+    sources[src.energy].strength.push(src.strength);
+    sources[src.energy].pitch.push(src.pitch);
   }
 
   for (const en of w.rules.energies) {
     const e = en.index;
     const field = w.field[e];
     const own = w.ownField[e];
+    const outside = w.outsideField[e];
+    const leaked = w.leakedField[e];
     if (en.spread === "diffusion") {
       own.fill(0);
       spreadDiffusion(w, s, e, en.conductivity, en.loss, sources[e], field);
@@ -48,6 +69,8 @@ export function computeFields(w: World): void {
     }
     field.fill(0);
     own.fill(0);
+    outside.fill(0);
+    leaked.fill(0);
     const dx = w.dirX[e];
     const dy = w.dirY[e];
     if (dx && dy) {
@@ -56,13 +79,13 @@ export function computeFields(w: World): void {
     }
     switch (en.spread) {
       case "radial":
-        spreadRadial(w, s, e, en.range, sources[e], field, own, dx!, dy!);
+        spreadRadial(w, s, e, en.range, sources[e], field, own, dx!, dy!, outside, leaked);
         break;
       case "ray":
-        spreadRays(w, s, e, en.range, sources[e], field, own, dx!, dy!);
+        spreadRays(w, s, e, en.range, sources[e], field, own, dx!, dy!, outside, leaked);
         break;
       case "conduction":
-        spreadConduction(w, s, e, en.range, sources[e], field, own, w.pitch[e]!);
+        spreadConduction(w, s, e, en.range, sources[e], field, own, w.pitch[e]!, outside, leaked);
         break;
     }
   }

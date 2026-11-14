@@ -48,3 +48,17 @@ export function scratchFor(owner: object, size: number): Scratch {
 export function falloff(d: number, range: number): number {
   return d > range ? 0 : 1 - d / (range + 1);
 }
+
+/**
+ * The sources of one energy for one tick: cells, their strengths and (where it
+ * applies) their pitch, in three groups. First the matter of this grid that
+ * emits; from `firstCarried` on, what grids carried in this one let out; from
+ * `firstOutside` on, what reaches this grid from the grid that carries it.
+ */
+export interface Sources {
+  cells: number[];
+  strength: number[];
+  pitch: number[];
+  firstCarried: number;
+  firstOutside: number;
+}

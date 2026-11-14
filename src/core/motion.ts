@@ -16,6 +16,7 @@
 // push travels through a row of touching bodies within the tick whichever way
 // it points.
 
+import { applyCarriedForces } from "./carried";
 import { computeSupport } from "./support";
 import type { Body, World } from "./world";
 
@@ -23,11 +24,19 @@ export function applyMotion(w: World): void {
   const world = w.rules.world;
 
   // Forces from responses and energy effects, gathered per body.
+  if (w.carried.length > 0) applyCarriedForces(w);
   for (const b of w.bodies.values()) {
     for (const c of b.cells) {
       b.fx += w.forceX[c];
       b.fy += w.forceY[c];
     }
+  }
+  // The total, in id order: if this grid is carried, its carrier feels it too.
+  w.passFx = 0;
+  w.passFy = 0;
+  for (const b of w.sortedBodies()) {
+    w.passFx += b.fx;
+    w.passFy += b.fy;
   }
 
   // Degradation earlier in the tick can change who rests on what.
@@ -68,17 +77,26 @@ function integrate(w: World, b: Body, g: number, mu: number, drag: number, maxSp
   const m = b.mass;
   const ax = b.fx / m;
   let ay = g + b.fy / m;
+  // A grid that is carried: its own change of motion, seen from inside.
+  const jx = w.frameJx;
+  const jy = w.frameJy;
   if (b.resting) {
+    // A support that drops away holds less of the weight (none in free fall).
+    if (jy < 0) ay += jy;
     // The support holds the weight (normal force) and friction drags the body
     // towards the velocity of what it rests on (terrain stands still).
     const normal = ay > 0 ? ay : 0;
     if (ay > 0) ay = 0;
     b.vx = applyFriction(w, b, b.vx + ax, mu * normal);
     b.vy += ay;
+    // A support that comes up at the body is not held off: they meet.
+    if (jy > 0) b.vy += jy;
   } else {
     b.vx += ax;
     b.vy += ay;
+    if (jy !== 0) b.vy += jy;
   }
+  if (jx !== 0) b.vx += jx;
   if (drag > 0) {
     // Air drag: every cell of a body is slowed by the air alike, so the loss
     // of speed goes with cells per unit mass. Light things are slowed most.
@@ -151,7 +169,8 @@ function blockers(w: World, b: Body, dx: number, dy: number): Blocked | null {
     const x = w.xOf(c) + dx;
     const y = w.yOf(c) + dy;
     if (!w.inBounds(x, y)) {
-      pairs.push([c, -1]);
+      // An open edge lets a lone cell out if there is somewhere for it to go.
+      if (!leaves(w, b, dx, dy)) pairs.push([c, -1]);
       continue;
     }
     const t = c + dy * w.width + dx;
@@ -160,10 +179,26 @@ function blockers(w: World, b: Body, dx: number, dy: number): Blocked | null {
   return pairs.length === 0 ? null : { pairs };
 }
 
-function tryStep(w: World, b: Body, dx: number, dy: number): Blocked | null {
+/** Whether a one-cell step takes a lone cell out past an open edge of the grid. */
+function leaves(w: World, b: Body, dx: number, dy: number): boolean {
+  if (w.edge === null || b.cells.length !== 1) return false;
+  const c = b.cells[0];
+  if (w.inBounds(w.xOf(c) + dx, w.yOf(c) + dy)) return false;
+  return w.edge.canLeave(c, dx, dy);
+}
+
+const LEFT = "left";
+
+/** Take a one-cell step: null if it moved, the blockers if not, LEFT if it moved out of the grid. */
+function tryStep(w: World, b: Body, dx: number, dy: number): Blocked | null | typeof LEFT {
   const blocked = blockers(w, b, dx, dy);
-  if (!blocked) w.translateBody(b, dx, dy);
-  return blocked;
+  if (blocked) return blocked;
+  if (leaves(w, b, dx, dy)) {
+    w.edge!.leave(b, dx, dy);
+    return LEFT;
+  }
+  w.translateBody(b, dx, dy);
+  return null;
 }
 
 /** Offsets stay in (-0.5, 0.5]: step when past +0.5, or at -0.5 and below. */
@@ -199,6 +234,7 @@ function move(w: World, b: Body, struck: Body[]): void {
     const o = alongY ? b.oy : b.ox;
     const s = o > 0 ? 1 : -1;
     const blocked = alongY ? tryStep(w, b, 0, s) : tryStep(w, b, s, 0);
+    if (blocked === LEFT) return;
     if (!blocked) {
       if (alongY) b.oy -= s;
       else b.ox -= s;

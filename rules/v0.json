@@ -142,6 +142,16 @@
       "strain": { "build": 0, "recover": 0.1, "max": 400, "fatigue": 0 },
       "degradesTo": null
     },
+    "weave": {
+      "name": "Weave",
+      "color": "#8c7a5b",
+      "mass": 0.1,
+      "blocks": [],
+      "trigger": { "kind": "none" },
+      "response": { "kind": "none" },
+      "strain": { "build": 0, "recover": 0.8, "max": 3, "fatigue": 0 },
+      "degradesTo": null
+    },
     "shell": {
       "name": "Shell",
       "color": "#c9ccd6",

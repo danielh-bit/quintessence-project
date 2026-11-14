@@ -8,18 +8,20 @@
 // direction pointing away from the source.
 
 import type { World } from "../world";
-import { falloff, type Scratch } from "./scratch";
+import { falloff, type Scratch, type Sources } from "./scratch";
 
 export function spreadRays(
   w: World,
   s: Scratch,
   energy: number,
   range: number,
-  sources: number[],
+  sources: Sources,
   field: Float64Array,
   own: Float64Array,
   dirX: Float64Array,
   dirY: Float64Array,
+  outside: Float64Array,
+  leaked: Float64Array,
 ): void {
   const els = w.rules.elements;
   const elem = w.elem;
@@ -31,14 +33,19 @@ export function spreadRays(
     return elem[c] !== 0 && els[elem[c]].blocks[energy];
   };
 
-  for (const src of sources) {
-    const B = w.output[src];
+  for (let k = 0; k < sources.cells.length; k++) {
+    const src = sources.cells[k];
+    const B = sources.strength[k];
+    const fromOutside = k >= sources.firstOutside;
+    const fromCarried = !fromOutside && k >= sources.firstCarried;
     const sx = w.xOf(src);
     const sy = w.yOf(src);
     const id = s.nextStamp();
     stamp[src] = id;
     field[src] += B;
     own[src] += B;
+    if (fromOutside) outside[src] += B;
+    else if (fromCarried) leaked[src] += B;
 
     const cast = (tx: number, ty: number) => {
       // Bresenham from (sx, sy) towards (tx, ty).
@@ -74,6 +81,8 @@ export function spreadRays(
           stamp[c] = id;
           const val = B * falloff(d, range);
           field[c] += val;
+          if (fromOutside) outside[c] += val;
+      else if (fromCarried) leaked[c] += val;
           dirX[c] += (val * dx) / d;
           dirY[c] += (val * dy) / d;
         }

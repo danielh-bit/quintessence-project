@@ -57,7 +57,7 @@ export class App {
   /** Events collected after every step (the core keeps only the last step's). */
   readonly eventLog: WorldEvent[] = [];
   eventSerial = 0;
-  eventCounts: Record<WorldEvent["kind"], number> = { degrade: 0, loosen: 0 };
+  eventCounts: Record<WorldEvent["kind"], number> = { degrade: 0, loosen: 0, transfer: 0 };
   tps = 0;
 
   private acc = 0;
@@ -121,7 +121,7 @@ export class App {
     this.selection = null;
     this.eventLog.length = 0;
     this.eventSerial++; // the event list redraws (now empty)
-    this.eventCounts = { degrade: 0, loosen: 0 };
+    this.eventCounts = { degrade: 0, loosen: 0, transfer: 0 };
     this.tools.cancel();
     this.renderer.fit();
     this.renderer.home();

@@ -18,7 +18,7 @@ export interface WorldParams {
   gravity: number;
   /** Speed cap per axis, cells per tick. */
   maxSpeed: number;
-  /** Fraction of velocity lost per tick by bodies that are not resting on anything. */
+  /** Air drag: fraction of velocity a loose body loses per tick, per cell per unit of its mass. */
   airDrag: number;
   /** Coulomb friction coefficient for bodies resting on something. */
   friction: number;
@@ -186,7 +186,7 @@ function parseWorld(v: Json): WorldParams {
   return {
     gravity: num(o, "gravity", ".world", { min: 0 }),
     maxSpeed: num(o, "maxSpeed", ".world", { min: 0 }),
-    airDrag: num(o, "airDrag", ".world", { min: 0, max: 1 }),
+    airDrag: num(o, "airDrag", ".world", { min: 0 }),
     friction: num(o, "friction", ".world", { min: 0 }),
     restitution: num(o, "restitution", ".world", { min: 0, max: 1 }),
     minImpact: num(o, "minImpact", ".world", { min: 0 }),

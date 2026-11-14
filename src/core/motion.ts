@@ -78,10 +78,14 @@ function integrate(w: World, b: Body, g: number, mu: number, drag: number, maxSp
   } else {
     b.vx += ax;
     b.vy += ay;
-    if (drag > 0) {
-      b.vx *= 1 - drag;
-      b.vy *= 1 - drag;
-    }
+  }
+  if (drag > 0) {
+    // Air drag: every cell of a body is slowed by the air alike, so the loss
+    // of speed goes with cells per unit mass. Light things are slowed most.
+    let keep = 1 - (drag * b.cells.length) / m;
+    if (keep < 0) keep = 0;
+    b.vx *= keep;
+    b.vy *= keep;
   }
   b.vx = clamp(b.vx + b.jx, maxSpeed);
   b.vy = clamp(b.vy + b.jy, maxSpeed);

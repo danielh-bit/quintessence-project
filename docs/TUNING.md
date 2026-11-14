@@ -79,6 +79,27 @@ An adversarial review of the core found real defects. They are fixed in generic 
 
 The tests were also tightened: the runaway must crack by overheating, the bouncer's flash test can no longer pass vacuously, the buzzer period is pinned and shown to be weight-independent, the latch's gap boundary is tested, and the guard is wider. Each was checked to fail when the old behaviour is restored.
 
+### 9. Air drag made generic; softer mass scale measured (milestone 1, no values changed yet)
+
+- **Code:** `world.airDrag` is now a generic rule for every loose body, resting or not: each tick `v *= 1 − airDrag × cells / mass`. Every cell is slowed by the air alike, so light bodies lose speed fastest. It used to apply only to bodies in free fall and ignored mass. At 0 (the current value) nothing changes: all 162 tests pass unchanged.
+- **Tool:** `npx tsx scripts/drift.ts 'world.airDrag=0,0.01' stones=1,3` puts three Bormite specks 2–4 cells from a loaded Galog on an open floor and prints their top speed and where they end up.
+- **Measured** (distance of the three specks from the Galog when they stop):
+
+| airDrag | Masses (Bormite / medium / Hard Rock) | 1 stone | 3 stones | Scenario tests that fail |
+| --- | --- | --- | --- | --- |
+| 0 | 0.2 / 3 / 6 (today) | 70, 124, 155 | 147, 186, 352 | none |
+| 0.005 | 0.2 / 3 / 6 | 18, 38, 48 | 41, 47, 71 | bouncer (weight order), runaway (no longer speeds up) |
+| 0.01 | 0.2 / 3 / 6 | 16, 17, 25 | 27, 29, 41 | bouncer, buzzer (period spread), runaway (3 tests) |
+| 0.02 | 0.2 / 3 / 6 | 11, 14, 15 | 16, 17, 23 | same as 0.01 |
+| 0 | 0.5 / 2 / 4 | 29, 33, 36 | 48, 87, 135 | bouncer and buzzer (weight limits moved) |
+| 0.01 | 0.5 / 2 / 4 | 14, 17, 19 | 23, 33, 50 | bouncer, buzzer |
+| 0.025 | 0.5 / 2 / 4 | 10, 12, 12 | 14, 18, 25 | bouncer, buzzer, runaway (3 tests) |
+
+- **What the failures are:**
+  - *Drag 0.005, today's masses:* the bouncer still beats steadily, but a lone Bormite (period 32 at a 10-cell drop) is now slower than one with a stone on it (31), so "added weight never makes it faster" fails. The runaway cart no longer speeds itself up after the standard shove (0.79 after the warm-up, where the test needs more than 1).
+  - *Softer masses, no drag:* both clocks still emerge. The limits move: the bouncer now carries 4 stones and stops at 5 (the test pins 3), and the buzzer still runs with 5 stones and only tires at 8 (the test pins 5).
+- **Conclusion:** drag small enough to leave the machines alone does not exist in this range, and no combination brings the dust to rest within a few cells. The reason is the size of the push: a Teta force that lifts a stack of stones accelerates a lone Bormite at many times gravity, so it reaches the speed cap inside the 5-cell range, and only a drag strong enough to kill ballistic flight (and with it the lone-Bormite bouncer) would stop it nearby. **No values were changed.** Decision pending.
+
 ## Results per machine
 
 | Machine | Emerges? | Notes |

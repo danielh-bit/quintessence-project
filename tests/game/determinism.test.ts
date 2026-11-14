@@ -97,6 +97,19 @@ describe("determinism", () => {
     expect(other.stateHash()).not.toBe(base.stateHash());
   });
 
+  it("at every tick, a restored snapshot takes the next step exactly as the live game does", () => {
+    // Stricter than comparing end states: nothing the next tick depends on may be missing from a snapshot.
+    const g = site();
+    for (let t = 0; t < 400; t++) {
+      const copy = Game.restore(V0, PLAYER, JSON.parse(JSON.stringify(g.snapshot())));
+      expect(copy.stateHash()).toBe(g.stateHash());
+      const i = script(g, t);
+      g.step(i);
+      copy.step(i);
+      expect(copy.stateHash(), `step from tick ${t}`).toBe(g.stateHash());
+    }
+  });
+
   it("a snapshot taken mid-run continues identically", () => {
     const rec = new Recorder(site());
     for (let t = 0; t < 300; t++) rec.step(script(rec.game, t));

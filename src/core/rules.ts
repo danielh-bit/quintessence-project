@@ -93,7 +93,14 @@ export interface ResponseShape {
 export type ResponseDef =
   | { kind: "none" }
   | ({ kind: "emit"; energy: number; pitch: number } & ResponseShape)
-  | ({ kind: "push" } & ResponseShape);
+  | ({
+      kind: "push";
+      /**
+       * Experimental, off at 0. Speed of the push as a flow, per unit of field:
+       * a cell is never pushed faster than `flow × field` along the push.
+       */
+      flow: number;
+    } & ResponseShape);
 
 export const RESPONSE_KINDS = ["none", "emit", "push"] as const;
 
@@ -291,8 +298,8 @@ function parseResponse(v: Json, path: string, energyIndex: Record<string, number
     rejectUnknownKeys(o, ["kind", "energy", "gain", "threshold", "max", "decay", "pitch"], path);
     return { kind, energy: energyRef(o.energy, `${path}.energy`, energyIndex), pitch: num(o, "pitch", path, { min: 0, def: 0 }), ...shape };
   }
-  rejectUnknownKeys(o, ["kind", "gain", "threshold", "max", "decay"], path);
-  return { kind, ...shape };
+  rejectUnknownKeys(o, ["kind", "gain", "threshold", "max", "decay", "flow"], path);
+  return { kind, flow: num(o, "flow", path, { min: 0, def: 0 }), ...shape };
 }
 
 function parseStrain(v: Json, path: string): StrainDef {

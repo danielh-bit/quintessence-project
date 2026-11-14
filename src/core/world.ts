@@ -392,9 +392,22 @@ export class World {
     if (this.body[i] === 0 && this.rules.elements[this.elem[i]].grip !== null) this.shock[i] += closing * focus;
   }
 
-  /** Recompute who rests on what right now (bodies' supported / resting flags, and load). */
+  /** Recompute who rests on what right now (bodies' supported / resting flags, masses and load). */
   refreshSupport(): void {
+    this.refreshCarriedMass();
     computeSupport(this);
+  }
+
+  /**
+   * Bring carriers' masses up to date. What a carried grid holds can be
+   * changed from outside between ticks, and a body's mass must never depend
+   * on when it was last looked at.
+   */
+  refreshCarriedMass(): void {
+    for (const c of this.carried) {
+      const p = c.ports[0];
+      if (this.elem[p] !== 0 && this.body[p] !== 0) this.recomputeMass(this.bodies.get(this.body[p])!);
+    }
   }
 
   bodyAt(x: number, y: number): Body | undefined {
@@ -641,6 +654,7 @@ export class World {
    */
   step(): void {
     this.events = [];
+    this.refreshCarriedMass();
     computeSupport(this);
     computeFields(this);
     applyResponses(this);

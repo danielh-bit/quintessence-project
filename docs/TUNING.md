@@ -138,6 +138,31 @@ The tests were also tightened: the runaway must crack by overheating, the bounce
 - **Consequence to watch:** anything that strikes an anchored cell harder than 0.1 per tick on average will dig it out. A Bormite held against a wall by strong Teta does this (up to 2 per tick), so a strong enough source next to Bormite and a soft wall loosens the wall. A fast hammer machine would too.
 - **Added:** `dense_lobime` (mass 3, blocks all four energies, strain limit 4000, no grip). The ship's hull material, and the pack's divider. It cannot be chipped by the pick or shaken loose by anything.
 
+### 13. Prototype: a flow limit on the push (measured only; off, no value changed)
+
+The open question from entry 9: how to make Bormite dust drift instead of being flung.
+
+- **Idea:** treat the push as a flow with a speed of its own, proportional to the field: a cell is never pushed faster than `flow × field` along the push direction. Dust then drifts at a speed set by the field strength and slows as the field thins.
+- **Code:** an optional `flow` on a `push` response in the rules data. It is **0 (off)** in `rules/v0.json`, and at 0 the push is exactly what it was (all tests pass unchanged). To try it, set `elements.bormite.response.flow` or pass it to the sweep scripts.
+- **Measured** (dust: distance from the Galog where three specks starting 2, 3 and 4 cells away come to rest; periods in ticks; "stops" = the beat dies out):
+
+| flow | Dust, 1 stone | Dust, 3 stones | Bouncer, 10-cell drop, 0 / 1 / 2 / 3 stones | Buzzer, 0 / 1 / 3 / 5 stones |
+| --- | --- | --- | --- | --- |
+| off (today) | 70, 124, 155 | 147, 186, 352 | 30 / 31 / 36 / stops | 17 / 17 / 17 / tires |
+| 0.001 | 5, 6, 7 (top speed 0.03) | 5, 6, 7 (0.11) | 40 / 40 / stops / stops | never lifts / 41 / 15 / tires |
+| 0.002 | 5, 6, 7 (0.07) | 5, 6, 7 (0.23) | 30 / 35 / 43 / stops | never lifts / 14 / 17 / tires |
+| 0.004 | 5, 6, 7 (0.15) | 12, 15, 15 (0.42) | 30 / 31 / 37 / stops | never lifts / 15 / 17 / tires |
+| 0.008 | 6, 7, 8 (0.29) | 23, 25, 53 (0.85) | 30 / 31 / 37 / stops | never lifts / 17 / 17 / tires |
+| 0.016 | 18, 22, 22 (0.56) | 70, 71, 208 (1.70) | 30 / 31 / 36 / stops | 41 / 17 / 17 / tires |
+
+- **What it fixes:** at 0.002 to 0.004 the dust does what the spec asks. It moves off at a slow, visible speed and stops just outside the Galog's reach, a few cells from where it lay. The bouncer keeps its beat and its regularities.
+- **What it breaks** (existing scenario tests that fail with it on, at 0.002, 0.004 and 0.008 alike):
+  - **Runaway engine** (3 tests). The cart's sail can no longer be pushed faster than the flow, so the engine tops out instead of running away and overheating. This is the real cost: the flow limit is a built-in limiter.
+  - **Buzzer** (2 tests). A lone Bormite with no weight on it presses so lightly on the Galog that the flow is too slow to lift it a whole cell, so the unweighted buzzer never starts. With one or more stones it buzzes as before.
+  - **Light link** (1 test). The far Ralgen still emits, but its Teta is weak, so the Bormite behind it barely moves and the test's "it was pushed" check fails.
+- **Also to redo if adopted:** the pack wall numbers (entry 11) and three pack tests, which are tuned to today's push.
+- **Not decided.** Options: adopt it and re-tune the runaway engine (a faster flow for strong fields, or stronger Lyegen), accept a gentler version of the drift, or leave the push as it is.
+
 ## Results per machine
 
 | Machine | Emerges? | Notes |

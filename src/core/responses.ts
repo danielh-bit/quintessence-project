@@ -80,8 +80,26 @@ export function applyResponses(w: World): void {
       // Along the field's direction, scaled by how one-sided it is (opposite pushes cancel).
       const total = w.field[t.energy][c];
       if (total > 0) {
-        w.forceX[c] += (out * w.dirX[t.energy]![c]) / total;
-        w.forceY[c] += (out * w.dirY[t.energy]![c]) / total;
+        const px = w.dirX[t.energy]![c];
+        const py = w.dirY[t.energy]![c];
+        let k = 1;
+        if (r.flow > 0) {
+          // The push is a flow with a speed of its own, set by its strength: a
+          // cell already moving with it is pushed less, and not at all at that speed.
+          const len = Math.sqrt(px * px + py * py);
+          const id = w.body[c];
+          if (len > 0 && id !== 0) {
+            const b = w.bodies.get(id)!;
+            const along = (b.vx * px + b.vy * py) / len;
+            // No more push than brings the body up to the flow's speed this tick.
+            const room = r.flow * len - along;
+            const force = (out * len) / total;
+            k = room <= 0 ? 0 : (room * b.mass) / force;
+            if (k > 1) k = 1;
+          }
+        }
+        w.forceX[c] += (k * out * px) / total;
+        w.forceY[c] += (k * out * py) / total;
       }
     }
     w.strain[c] += def.strain.build * out;

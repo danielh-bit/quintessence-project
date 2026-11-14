@@ -81,6 +81,8 @@ export class World {
   readonly impact: Float64Array;
   /** Impacts being recorded during the current motion phase. */
   readonly impactNext: Float64Array;
+  /** How far recent impacts have shaken an anchored cell towards coming loose (0 for loose cells). */
+  readonly shock: Float64Array;
 
   // --- channels recomputed every tick ---
   /** Weight resting on the cell, in mass units. */
@@ -142,6 +144,7 @@ export class World {
     this.outPitch = new Float64Array(n);
     this.impact = new Float64Array(n);
     this.impactNext = new Float64Array(n);
+    this.shock = new Float64Array(n);
     this.load = new Float64Array(n);
     this.forceX = new Float64Array(n);
     this.forceY = new Float64Array(n);
@@ -326,6 +329,7 @@ export class World {
   /** Free an anchored cell: it becomes a one-cell loose body. */
   loosen(i: number): void {
     if (this.elem[i] === 0 || this.body[i] !== 0) return;
+    this.shock[i] = 0;
     this.newBody([i]);
   }
 
@@ -378,10 +382,14 @@ export class World {
     if (speed >= this.rules.world.minImpact) this.feelImpact(i, speed, focus, this.impact);
   }
 
-  /** Record an impact on a cell: the trigger value, and the strain every impact adds. */
-  feelImpact(i: number, closing: number, _focus: number, into: Float64Array): void {
+  /**
+   * Record an impact on a cell: the trigger value, the strain every impact
+   * adds, and, for an anchored cell, the shock that can knock it loose.
+   */
+  feelImpact(i: number, closing: number, focus: number, into: Float64Array): void {
     if (closing > into[i]) into[i] = closing;
     this.strain[i] += this.rules.world.impactStrain * closing;
+    if (this.body[i] === 0 && this.rules.elements[this.elem[i]].grip !== null) this.shock[i] += closing * focus;
   }
 
   /** Recompute who rests on what right now (bodies' supported / resting flags, and load). */
@@ -566,6 +574,7 @@ export class World {
     this.outPitch[i] = 0;
     this.impact[i] = 0;
     this.impactNext[i] = 0;
+    this.shock[i] = 0;
   }
 
   /**
@@ -691,6 +700,7 @@ export class World {
       strainMax: this.rules.elements[e].strain.max,
       output: this.output[i],
       impact: this.impact[i],
+      shock: this.shock[i],
       load: this.load[i],
       fields,
     };
@@ -717,6 +727,7 @@ export class World {
     f64(this.output);
     f64(this.outPitch);
     f64(this.impact);
+    f64(this.shock);
     for (const f of this.diffusionFields()) f64(f);
     const bodyState = new Float64Array(this.bodies.size * 5 + 2);
     let k = 0;
@@ -763,6 +774,7 @@ export interface CellInfo {
   strainMax: number;
   output: number;
   impact: number;
+  shock: number;
   load: number;
   fields: Record<string, number>;
 }

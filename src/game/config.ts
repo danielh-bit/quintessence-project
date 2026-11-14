@@ -30,6 +30,10 @@ export interface ActorConfig {
     /** Ticks between swings. */
     cooldown: number;
   };
+  place: {
+    /** Ticks the hand is busy after putting a cell down. */
+    cooldown: number;
+  };
   /**
    * The pack: a small grid carried by the body, drawn as a picture. Each
    * character of `layout` is one cell; `legend` names the element of each
@@ -68,6 +72,7 @@ export function loadActorConfig(json: unknown): ActorConfig {
   const walk = rec(root.walk, ".walk");
   const jump = rec(root.jump, ".jump");
   const swing = rec(root.swing, ".swing");
+  const place = rec(root.place, ".place");
   if (typeof body.element !== "string") fail(".body.element", "expected an element id");
   const width = num(body, "width", ".body", 1, true);
   const height = num(body, "height", ".body", 1, true);
@@ -101,6 +106,7 @@ export function loadActorConfig(json: unknown): ActorConfig {
     jump: { speed: num(jump, "speed", ".jump", 0) },
     reach: num(root, "reach", "", 0),
     swing: { speed: num(swing, "speed", ".swing", 0), focus: num(swing, "focus", ".swing", 0), cooldown: num(swing, "cooldown", ".swing", 0, true) },
+    place: { cooldown: num(place, "cooldown", ".place", 0, true) },
     pack: { ports, layout, legend },
   };
 }

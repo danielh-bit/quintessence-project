@@ -1,26 +1,13 @@
 {
   "description": "The player's body, movement and tools. Every number is a tuning parameter. Elements named here are ordinary elements from the rules file.",
-  "body": {
-    "element": "shell",
-    "width": 2,
-    "height": 4
-  },
-  "walk": {
-    "speed": 0.15,
-    "accel": 0.03,
-    "airControl": 0.3
-  },
-  "jump": {
-    "speed": 0.5
-  },
+  "body": { "element": "shell", "width": 2, "height": 4 },
+  "walk": { "speed": 0.15, "accel": 0.03, "airControl": 0.3 },
+  "jump": { "speed": 0.5 },
   "reach": 5,
-  "swing": {
-    "speed": 1.0,
-    "focus": 3,
-    "cooldown": 12
-  },
+  "swing": { "speed": 1.0, "focus": 3, "cooldown": 12 },
+  "place": { "cooldown": 6 },
   "pack": {
-    "ports": [[ 0, 1 ], [ 1, 1 ]],
+    "ports": [ [ 0, 1 ], [ 1, 1 ] ],
     "layout": [
       "wwwLwww",
       "w..L..w",
@@ -28,9 +15,6 @@
       "w..L..w",
       "wwwLwww"
     ],
-    "legend": {
-      "w": "weave",
-      "L": "lobime"
-    }
+    "legend": { "w": "weave", "L": "dense_lobime" }
   }
 }

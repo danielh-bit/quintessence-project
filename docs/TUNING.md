@@ -100,6 +100,44 @@ The tests were also tightened: the runaway must crack by overheating, the bounce
   - *Softer masses, no drag:* both clocks still emerge. The limits move: the bouncer now carries 4 stones and stops at 5 (the test pins 3), and the buzzer still runs with 5 stones and only tires at 8 (the test pins 5).
 - **Conclusion:** drag small enough to leave the machines alone does not exist in this range, and no combination brings the dust to rest within a few cells. The reason is the size of the push: a Teta force that lifts a stack of stones accelerates a lone Bormite at many times gravity, so it reaches the speed cap inside the 5-cell range, and only a drag strong enough to kill ballistic flight (and with it the lone-Bormite bouncer) would stop it nearby. **No values were changed.** Decision pending.
 
+### 10. The player's body: new element Shell (milestone 1)
+
+- **Added:** `shell` (mass 1.5 per cell, blocks Glow, no trigger or response, strain limit 1000 with recovery 1.0 like Lobime, no grip). The body is 2×4 cells (`data/player.json`), so it weighs 12: four stones.
+- **Why these numbers:** survival is out of scope for milestone 1, so the body must not break. Landings do strain it by the generic impact rule (at most 2 per landing); recovery of 1.0 per tick clears that at once. Fall damage in milestone 3 can come from lowering these, with no new rule.
+- **Movement** (`data/player.json`, not rules): walk 0.15 cells/tick, jump 0.5 (about 3 cells high). A jump landing is an impact of 0.5, so jumping on an Exgen fires it at about 600.
+
+### 11. The pack: new element Weave, and the wall numbers (milestone 1)
+
+- **Added:** `weave` (mass 0.1, blocks nothing, strain limit 3, recovery 0.8, no grip). It is the pack's outer wall. The divider between the two compartments is Dense Lobime (entry 12).
+- **How a push strains a wall:** a Bormite held against a wall by Teta is pushed into it again every tick, and each of those is an impact (the existing rule; it is why Bormite's own durability was raised in entry 3). So a steady push strains the wall at about `0.02 × Teta` per tick, up to 2 per tick.
+- **Measured** (one Bormite in the pack; peak strain on any wall cell, with the limit switched off):
+
+| What the player does | Teta inside the pack | Peak wall strain (recovery 0.8) |
+| --- | --- | --- |
+| Stands on a Galog | 41 | 1.7 |
+| Drops 1 cell onto two Exgens | 61 | 1.85 |
+| Drops 3 cells | 165 | 2.0 |
+| Drops 6 cells | 251 | 2.4 |
+| Drops 10 cells | 338 | 3.1 |
+| Drops 20 cells | 511 | 4.0 |
+| Drops 45 cells | 771 | 5.0 |
+
+- **Chosen:** limit 3. Standing on a Galog or a short drop only throws the contents about; a drop of about 10 cells or more onto an Exgen with Bormite aboard cracks a wall and the Bormite goes out through the hole. Stones never crack it: a landing slams them into the floor once (at most 2), below the limit.
+- **Recovery 0.5 was tried first:** standing on a Galog then wore the wall through in about 45 ticks, which is not a "small push".
+- **To revisit:** these numbers depend on how hard Teta throws a lone Bormite (the open drift question, entry 9). If the push changes, re-measure this table.
+- **Weight:** the empty pack weighs 17 (five Dense Lobime divider cells at 3, twenty Weave cells at 0.1), more than the body's 12. A Galog under the player is therefore loaded at about 14.5 per foot. The divider is the cost; a lighter divider element is a data change.
+
+### 12. Mining: grip and shock, and Dense Lobime (milestone 1)
+
+- **New generic rule:** every impact on an anchored cell adds `closing speed × focus` to the cell's shock; shock falls by `world.shockRecover` per tick; at or above the element's `grip` the cell comes loose, keeping its strain and heat. Collisions have focus 1.
+- **Why not the strain limit:** see `docs/SIMULATION.md`, "Mining". In short, machine parts must survive hundreds of impacts and Hard Rock must outlast the pick, so a pick that is only an impact cannot wear anything through; and a cell at its strain limit crumbles, leaving nothing to carry.
+- **Values:** `shockRecover` 0.1. Grips: Bormite 3; Queflair, Ralgen 4.5; Lobime, Galog, Exgen, Colomium, Sormite, Lyegen 6; Hard Rock, Dense Lobime, Shell, Weave none.
+- **The pick** (`data/player.json`): speed 1.0, focus 3, one swing per 12 ticks. So each swing adds 3 shock and 1.2 settles before the next: Bormite comes out in 1 swing, Queflair and Ralgen in 2, the rest in 3.
+- **Hard Rock and the pick:** a swing adds 1 strain and Hard Rock recovers 1.2 between swings, so its strain never builds (tested over 500 swings).
+- **The sandbox is untouched:** every grip is above 2, the fastest a collision can be, so one collision loosens nothing, and at 0.1 per tick the shock from a bouncer's beat (2 every 23 ticks or slower) is gone before the next. Measured over 3000 ticks of all eight scenarios: nothing loosened, highest shock 1.88 (the bouncer's Exgen), and every run identical cell for cell to a run with no grips at all.
+- **Consequence to watch:** anything that strikes an anchored cell harder than 0.1 per tick on average will dig it out. A Bormite held against a wall by strong Teta does this (up to 2 per tick), so a strong enough source next to Bormite and a soft wall loosens the wall. A fast hammer machine would too.
+- **Added:** `dense_lobime` (mass 3, blocks all four energies, strain limit 4000, no grip). The ship's hull material, and the pack's divider. It cannot be chipped by the pick or shaken loose by anything.
+
 ## Results per machine
 
 | Machine | Emerges? | Notes |

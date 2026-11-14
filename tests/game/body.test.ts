@@ -158,12 +158,9 @@ describe("the player's body: impact", () => {
     expect(w.fieldAt("teta", 32, fy - 1)).toBe(0);
     // Swinging every tick still lands only one blow per cooldown.
     let bursts = 0;
-    let before = 0;
     for (let t = 0; t < PLAYER.swing.cooldown * 4; t++) {
-      g.step(input({ swing: { x: 13, y: fy } }));
-      const out = w.inspect(13, fy)!.output;
-      if (out > before) bursts++;
-      before = out;
+      g.step(input({ swing: { x: 14, y: fy } }));
+      if (g.events.some((e) => e.kind === "swing")) bursts++;
     }
     expect(bursts).toBe(4);
   });

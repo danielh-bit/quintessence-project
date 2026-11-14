@@ -28,6 +28,8 @@ export interface WorldParams {
   minImpact: number;
   /** Strain added to each of the two contact cells per unit of closing speed. */
   impactStrain: number;
+  /** Shock an anchored cell shakes off per tick (see ElementDef.grip). */
+  shockRecover: number;
 }
 
 export interface ShakeEffect {
@@ -120,6 +122,13 @@ export interface ElementDef {
   strain: StrainDef;
   /** Element index the cell turns into when it degrades; 0 = it crumbles away. */
   degradesTo: number;
+  /**
+   * How firmly an anchored cell of this element sits. Every impact on an
+   * anchored cell adds its closing speed (times how concentrated the blow is)
+   * to the cell's shock; at or above the grip the cell comes loose. Null = it
+   * cannot be knocked loose.
+   */
+  grip: number | null;
 }
 
 export interface RuleSet {
@@ -182,7 +191,7 @@ function rejectUnknownKeys(o: Record<string, Json>, allowed: string[], path: str
 
 function parseWorld(v: Json): WorldParams {
   const o = obj(v, ".world");
-  rejectUnknownKeys(o, ["gravity", "maxSpeed", "airDrag", "friction", "restitution", "minImpact", "impactStrain"], ".world");
+  rejectUnknownKeys(o, ["gravity", "maxSpeed", "airDrag", "friction", "restitution", "minImpact", "impactStrain", "shockRecover"], ".world");
   return {
     gravity: num(o, "gravity", ".world", { min: 0 }),
     maxSpeed: num(o, "maxSpeed", ".world", { min: 0 }),
@@ -191,6 +200,7 @@ function parseWorld(v: Json): WorldParams {
     restitution: num(o, "restitution", ".world", { min: 0, max: 1 }),
     minImpact: num(o, "minImpact", ".world", { min: 0 }),
     impactStrain: num(o, "impactStrain", ".world", { min: 0 }),
+    shockRecover: num(o, "shockRecover", ".world", { min: 0, def: 0 }),
   };
 }
 
@@ -334,13 +344,14 @@ export function loadRules(json: unknown): RuleSet {
     response: { kind: "none" },
     strain: { build: 0, recover: 0, max: Infinity, fatigue: 0 },
     degradesTo: 0,
+    grip: null,
   };
 
   const elements: ElementDef[] = [placeholder];
   for (const id of elementIds) {
     const path = `.elements.${id}`;
     const o = obj(elementsO[id], path);
-    rejectUnknownKeys(o, ["name", "color", "mass", "blocks", "trigger", "response", "strain", "degradesTo"], path);
+    rejectUnknownKeys(o, ["name", "color", "mass", "blocks", "trigger", "response", "strain", "degradesTo", "grip"], path);
     const color = str(o, "color", path);
     if (!COLOR_RE.test(color)) throw new RulesError(`${path}.color`, "expected #rrggbb");
     const blocksRaw = o.blocks ?? [];
@@ -384,6 +395,7 @@ export function loadRules(json: unknown): RuleSet {
       response,
       strain: parseStrain(o.strain, `${path}.strain`),
       degradesTo,
+      grip: o.grip === undefined || o.grip === null ? null : num(o, "grip", path, { min: Number.MIN_VALUE }),
     });
   }
 

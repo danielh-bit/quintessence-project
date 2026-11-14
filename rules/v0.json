@@ -8,7 +8,8 @@
     "friction": 0.2,
     "restitution": 0.0,
     "minImpact": 0.05,
-    "impactStrain": 1.0
+    "impactStrain": 1.0,
+    "shockRecover": 0.1
   },
   "energies": {
     "teta": {
@@ -50,7 +51,8 @@
       "trigger": { "kind": "none" },
       "response": { "kind": "none" },
       "strain": { "build": 0, "recover": 1.0, "max": 1000, "fatigue": 0 },
-      "degradesTo": null
+      "degradesTo": null,
+      "grip": 6
     },
     "galog": {
       "name": "Galog",
@@ -60,7 +62,8 @@
       "trigger": { "kind": "pressure" },
       "response": { "kind": "emit", "energy": "teta", "gain": 20, "threshold": 0, "max": 1000, "decay": 0 },
       "strain": { "build": 0.0005, "recover": 0.05, "max": 100, "fatigue": 1 },
-      "degradesTo": null
+      "degradesTo": null,
+      "grip": 6
     },
     "exgen": {
       "name": "Exgen",
@@ -70,7 +73,8 @@
       "trigger": { "kind": "impact" },
       "response": { "kind": "emit", "energy": "teta", "gain": 1500, "threshold": 0.1, "max": 5000, "decay": 0.6 },
       "strain": { "build": 0.0001, "recover": 0.01, "max": 100, "fatigue": 0 },
-      "degradesTo": null
+      "degradesTo": null,
+      "grip": 6
     },
     "bormite": {
       "name": "Bormite",
@@ -80,7 +84,8 @@
       "trigger": { "kind": "exposure", "energy": "teta" },
       "response": { "kind": "push", "gain": 0.004, "threshold": 0, "max": 100, "decay": 0 },
       "strain": { "build": 0.001, "recover": 0.2, "max": 200, "fatigue": 0 },
-      "degradesTo": null
+      "degradesTo": null,
+      "grip": 3
     },
     "queflair": {
       "name": "Queflair",
@@ -90,7 +95,8 @@
       "trigger": { "kind": "exposure", "energy": "teta" },
       "response": { "kind": "emit", "energy": "glow", "gain": 1.5, "threshold": 0.5, "max": 20, "decay": 0 },
       "strain": { "build": 0.005, "recover": 0.05, "max": 100, "fatigue": 0 },
-      "degradesTo": null
+      "degradesTo": null,
+      "grip": 4.5
     },
     "colomium": {
       "name": "Colomium",
@@ -100,7 +106,8 @@
       "trigger": { "kind": "motion" },
       "response": { "kind": "emit", "energy": "hum", "gain": 10, "threshold": 0.01, "max": 50, "decay": 0, "pitch": 1.0 },
       "strain": { "build": 0.0005, "recover": 0.05, "max": 100, "fatigue": 0 },
-      "degradesTo": null
+      "degradesTo": null,
+      "grip": 6
     },
     "sormite": {
       "name": "Sormite",
@@ -110,7 +117,8 @@
       "trigger": { "kind": "exposure", "energy": "hum" },
       "response": { "kind": "emit", "energy": "heat", "gain": 0.2, "threshold": 0.1, "max": 10, "decay": 0 },
       "strain": { "build": 0.01, "recover": 0.05, "max": 100, "fatigue": 0 },
-      "degradesTo": null
+      "degradesTo": null,
+      "grip": 6
     },
     "lyegen": {
       "name": "Lyegen",
@@ -120,7 +128,8 @@
       "trigger": { "kind": "exposure", "energy": "heat" },
       "response": { "kind": "emit", "energy": "teta", "gain": 6, "threshold": 0.5, "max": 100, "decay": 0 },
       "strain": { "build": 0.0005, "recover": 0.05, "max": 100, "fatigue": 0 },
-      "degradesTo": null
+      "degradesTo": null,
+      "grip": 6
     },
     "ralgen": {
       "name": "Ralgen",
@@ -130,7 +139,8 @@
       "trigger": { "kind": "exposure", "energy": "glow" },
       "response": { "kind": "emit", "energy": "teta", "gain": 2.0, "threshold": 0.5, "max": 40, "decay": 0 },
       "strain": { "build": 0.001, "recover": 0.05, "max": 100, "fatigue": 0 },
-      "degradesTo": null
+      "degradesTo": null,
+      "grip": 4.5
     },
     "hard_rock": {
       "name": "Hard Rock",
@@ -140,7 +150,19 @@
       "trigger": { "kind": "none" },
       "response": { "kind": "none" },
       "strain": { "build": 0, "recover": 0.1, "max": 400, "fatigue": 0 },
-      "degradesTo": null
+      "degradesTo": null,
+      "grip": null
+    },
+    "dense_lobime": {
+      "name": "Dense Lobime",
+      "color": "#565b69",
+      "mass": 3,
+      "blocks": ["teta", "glow", "heat", "hum"],
+      "trigger": { "kind": "none" },
+      "response": { "kind": "none" },
+      "strain": { "build": 0, "recover": 1.0, "max": 4000, "fatigue": 0 },
+      "degradesTo": null,
+      "grip": null
     },
     "weave": {
       "name": "Weave",
@@ -150,7 +172,8 @@
       "trigger": { "kind": "none" },
       "response": { "kind": "none" },
       "strain": { "build": 0, "recover": 0.8, "max": 3, "fatigue": 0 },
-      "degradesTo": null
+      "degradesTo": null,
+      "grip": null
     },
     "shell": {
       "name": "Shell",
@@ -160,7 +183,8 @@
       "trigger": { "kind": "none" },
       "response": { "kind": "none" },
       "strain": { "build": 0, "recover": 1.0, "max": 1000, "fatigue": 0 },
-      "degradesTo": null
+      "degradesTo": null,
+      "grip": null
     }
   }
 }

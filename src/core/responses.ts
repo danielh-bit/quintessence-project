@@ -140,7 +140,7 @@ export function applyEffects(w: World): void {
 }
 
 /**
- * Strain recovery and degradation. Recovery is constant, so an element that
+ * Strain recovery and degradation, and shock. Recovery is constant, so an element that
  * rests (or responds only lightly) recovers; at or above its limit an element
  * degrades into `degradesTo` (0 = it crumbles away), and a body that loses a
  * cell falls apart into its connected parts.
@@ -158,6 +158,20 @@ export function applyStrain(w: World): void {
       const into = els[el].degradesTo;
       w.events.push({ tick: w.tick, kind: "degrade", x: w.xOf(c), y: w.yOf(c), element: el, into });
       w.transmute(c, into);
+      continue;
+    }
+    // Shock: an anchored cell shaken past its grip comes loose (keeping its
+    // strain and stored energies); otherwise it settles again.
+    const sh = w.shock[c];
+    if (sh > 0) {
+      const grip = els[el].grip;
+      if (grip !== null && sh >= grip && w.body[c] === 0) {
+        w.loosen(c);
+        w.events.push({ tick: w.tick, kind: "loosen", x: w.xOf(c), y: w.yOf(c), element: el, into: el });
+      } else {
+        const left = sh - w.rules.world.shockRecover;
+        w.shock[c] = left > 0 ? left : 0;
+      }
     }
   }
 }

@@ -37,7 +37,13 @@ function script(g: Game, t: number): Input {
     const b = g.bounds()!;
     swing = { x: b.x + Math.floor(r(3) * 9) - 4, y: b.y + Math.floor(r(4) * 7) };
   }
-  return { move, jump, swing };
+  // Now and then, put down whatever is in some pack cell.
+  let place: Input["place"] = null;
+  if (t % 31 === 5) {
+    const b = g.bounds()!;
+    place = { x: b.x + (r(5) < 0.5 ? -2 : 3), y: b.y + 1 + Math.floor(r(6) * 3), slotX: 1 + Math.floor(r(7) * 5), slotY: 1 + Math.floor(r(8) * 3) };
+  }
+  return { move, jump, swing, place };
 }
 
 function play(ticks: number): { game: Game; recording: Recording } {
@@ -61,15 +67,21 @@ describe("determinism", () => {
     const start = a.game.bounds()!.x;
     let moved = false;
     let stirred = false;
+    let taken = false;
+    let placed = false;
     for (let t = 0; t < 600; t++) {
       a.step(script(a.game, t));
       b.step(script(b.game, t));
       if (a.game.bounds()!.x !== start) moved = true;
       if (a.game.pack.find("bormite")[0]?.[1] !== 3) stirred = true;
+      if (a.game.events.some((e) => e.kind === "take")) taken = true;
+      if (a.game.events.some((e) => e.kind === "place")) placed = true;
       if (t % 50 === 0) expect(b.game.stateHash()).toBe(a.game.stateHash());
     }
     expect(moved).toBe(true);
     expect(a.recording.inputs.some((i) => i.swing !== null)).toBe(true);
+    expect(taken).toBe(true);
+    expect(placed).toBe(true);
     // The pack took part: its contents were thrown about.
     expect(stirred).toBe(true);
   });

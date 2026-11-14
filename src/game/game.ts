@@ -9,12 +9,16 @@
 // The pack is a small grid of its own, carried by the body (a carried grid of
 // the core). It runs on the same rules, moves with the body and weighs on it.
 //
+// The hands move matter between the world and the pack: a swing that leaves
+// its target loose takes it into the pack, and a cell from the pack can be put
+// down in the world. Matter keeps everything that belongs to it on the way.
+//
 // Everything here is deterministic: `step(input)` applies the input and
 // advances the world one tick.
 
 import { loadScene, saveScene, type Body, type RuleSet, type Scene, World } from "../core";
 import type { ActorConfig } from "./config";
-import { type Input, parseInput } from "./input";
+import { copyInput, type Input, parseInput } from "./input";
 
 export const GAME_FORMAT = "quintessence-game";
 export const GAME_VERSION = 1;
@@ -30,13 +34,26 @@ export interface GameSnapshot {
   cooldown: number;
 }
 
+/** Something the player's hands did in the last step (for sound and animation; not simulation state). */
+export interface GameEvent {
+  /** "swing": a blow landed. "take": a cell went into the pack. "place": a cell was put down. */
+  kind: "swing" | "take" | "place";
+  /** World cell it happened at. */
+  x: number;
+  y: number;
+  /** Element id of the cell involved. */
+  element: string;
+}
+
 export class Game {
   readonly world: World;
   readonly config: ActorConfig;
   /** Body id of the actor. */
   bodyId: number;
-  /** Ticks until the tool can swing again. */
+  /** Ticks until the hands are free again (after a swing or putting something down). */
   cooldown = 0;
+  /** What the hands did in the last step. */
+  events: GameEvent[] = [];
 
   private constructor(world: World, config: ActorConfig, bodyId: number) {
     this.world = world;
@@ -132,15 +149,48 @@ export class Game {
 
   /** Apply one tick's input, then advance the world one tick. */
   step(input: Input): void {
-    this.act(input);
+    this.events = [];
+    const struck = this.act(input);
     this.world.step();
+    if (struck >= 0) this.take(struck);
   }
 
-  private act(input: Input): void {
+  /** The first free cell at the top of the pack's room, in reading order, or -1 if it is full. */
+  packEntry(): number {
+    const pack = this.pack;
+    const layout = this.config.pack.layout;
+    for (let y = 0; y < layout.length; y++) {
+      for (let x = 0; x < layout[y].length; x++) {
+        if (layout[y][x] !== ".") continue;
+        // Room at the top: nothing but wall above it.
+        if (y > 0 && layout[y - 1][x] === ".") continue;
+        if (pack.elem[pack.idx(x, y)] === 0) return pack.idx(x, y);
+      }
+    }
+    return -1;
+  }
+
+  /** After a swing: if the cell it hit is loose now, it goes into the pack (if there is room). */
+  private take(i: number): void {
+    const w = this.world;
+    if (w.elem[i] === 0 || w.body[i] === 0 || w.body[i] === this.bodyId) return;
+    const to = this.packEntry();
+    if (to < 0) return;
+    const element = w.rules.elements[w.elem[i]].id;
+    const x = w.xOf(i);
+    const y = w.yOf(i);
+    this.pack.takeCell(w, i, to);
+    const b = this.body();
+    if (b) w.recomputeMass(b);
+    this.events.push({ kind: "take", x, y, element });
+  }
+
+  /** Apply the input to the world. Returns the cell a swing landed on, or -1. */
+  private act(input: Input): number {
     const w = this.world;
     if (this.cooldown > 0) this.cooldown--;
     const b = this.body();
-    if (!b) return;
+    if (!b) return -1;
     w.refreshSupport();
     const { walk, jump, swing } = this.config;
 
@@ -168,6 +218,7 @@ export class Game {
     }
 
     // The tool: a blow on the aimed cell.
+    let struck = -1;
     if (input.swing && this.cooldown === 0) {
       const { x, y } = input.swing;
       if (this.inReach(x, y)) {
@@ -175,9 +226,32 @@ export class Game {
         if (w.elem[i] !== 0 && w.body[i] !== b.id) {
           w.strike(i, swing.speed, swing.focus);
           this.cooldown = swing.cooldown;
+          struck = i;
+          this.events.push({ kind: "swing", x, y, element: w.rules.elements[w.elem[i]].id });
         }
       }
     }
+
+    // The hand: put a cell from the pack down in an empty cell of the world.
+    if (input.place && this.cooldown === 0) {
+      const { x, y, slotX, slotY } = input.place;
+      const pack = this.pack;
+      if (this.inReach(x, y) && w.elem[w.idx(x, y)] === 0 && this.isPackRoom(slotX, slotY)) {
+        const from = pack.idx(slotX, slotY);
+        const held = pack.bodyAt(slotX, slotY);
+        if (held && held.cells.length === 1) {
+          const element = pack.rules.elements[pack.elem[from]].id;
+          const nb = w.takeCell(pack, from, w.idx(x, y));
+          // It leaves the hand moving with the player.
+          nb.vx = b.vx;
+          nb.vy = b.vy;
+          w.recomputeMass(b);
+          this.cooldown = this.config.place.cooldown;
+          this.events.push({ kind: "place", x, y, element });
+        }
+      }
+    }
+    return struck;
   }
 
   // ------------------------------------------------------------------ state
@@ -223,7 +297,7 @@ export class Recorder {
   }
 
   step(input: Input): void {
-    this.recording.inputs.push({ move: input.move, jump: input.jump, swing: input.swing ? { x: input.swing.x, y: input.swing.y } : null });
+    this.recording.inputs.push(copyInput(input));
     this.game.step(input);
   }
 }

@@ -26,6 +26,8 @@ export interface SceneCell {
   p?: number;
   /** Impact felt in the last motion phase. */
   i?: number;
+  /** Shock (anchored cells only). */
+  k?: number;
   /** Stored values of diffusion energies, by energy id. */
   f?: Record<string, number>;
 }
@@ -84,6 +86,7 @@ export function saveScene(w: World, meta: { name?: string; description?: string 
     if (w.output[i] !== 0) c.o = w.output[i];
     if (w.outPitch[i] !== 0) c.p = w.outPitch[i];
     if (w.impact[i] !== 0) c.i = w.impact[i];
+    if (w.shock[i] !== 0) c.k = w.shock[i];
     for (const en of diff) {
       const v = w.field[en.index][i];
       if (v !== 0) (c.f ??= {})[en.id] = v;
@@ -176,6 +179,7 @@ export function loadScene(rules: RuleSet, scene: unknown): World {
     if (c.o !== undefined) w.output[i] = finite(c.o, "output");
     if (c.p !== undefined) w.outPitch[i] = finite(c.p, "pitch");
     if (c.i !== undefined) w.impact[i] = finite(c.i, "impact");
+    if (c.k !== undefined && c.a) w.shock[i] = finite(c.k, "shock");
     if (c.f !== undefined) {
       if (!isRecord(c.f)) fail(`stored energies at (${x}, ${y}) must be an object`);
       for (const [eid, v] of Object.entries(c.f)) {

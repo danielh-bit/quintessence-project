@@ -321,6 +321,48 @@ export class World {
     b.vy = vy;
   }
 
+  // ------------------------------------------------------------------ outside actions
+  //
+  // Things done to the world from outside the rules (a hand, a tool, an editor).
+  // They are applied between ticks and take effect in the next step.
+
+  /** Add a force to a body for the coming tick. */
+  push(bodyId: number, fx: number, fy: number): void {
+    const b = this.bodies.get(bodyId);
+    if (!b) return;
+    b.fx += fx;
+    b.fy += fy;
+  }
+
+  /** Add a sudden change of velocity to a body for the coming tick. */
+  kick(bodyId: number, jx: number, jy: number): void {
+    const b = this.bodies.get(bodyId);
+    if (!b) return;
+    b.jx += jx;
+    b.jy += jy;
+  }
+
+  /**
+   * A blow on a cell at the given closing speed: the same as an impact from a
+   * collision. The cell feels it in the coming tick. `focus` says how much the
+   * blow is concentrated (a pointed tool); an ordinary collision has focus 1.
+   */
+  strike(i: number, speed: number, focus = 1): void {
+    if (i < 0 || i >= this.size || this.elem[i] === 0 || !(speed > 0)) return;
+    if (speed >= this.rules.world.minImpact) this.feelImpact(i, speed, focus, this.impact);
+  }
+
+  /** Record an impact on a cell: the trigger value, and the strain every impact adds. */
+  feelImpact(i: number, closing: number, _focus: number, into: Float64Array): void {
+    if (closing > into[i]) into[i] = closing;
+    this.strain[i] += this.rules.world.impactStrain * closing;
+  }
+
+  /** Recompute who rests on what right now (bodies' supported / resting flags, and load). */
+  refreshSupport(): void {
+    computeSupport(this);
+  }
+
   bodyAt(x: number, y: number): Body | undefined {
     if (!this.inBounds(x, y)) return undefined;
     const i = this.idx(x, y);

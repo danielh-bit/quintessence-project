@@ -296,8 +296,7 @@ function impactDown(w: World, b: Body, touched: Set<number>, seen: Set<number>):
 }
 
 function recordImpact(w: World, c: number, closing: number): void {
-  if (closing > w.impactNext[c]) w.impactNext[c] = closing;
-  w.strain[c] += w.rules.world.impactStrain * closing;
+  w.feelImpact(c, closing, 1, w.impactNext);
 }
 
 function setAxis(b: Body, alongY: boolean, v: number): void {

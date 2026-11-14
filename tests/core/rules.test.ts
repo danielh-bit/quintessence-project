@@ -6,8 +6,11 @@ describe("rules loader", () => {
   it("loads rules/v0.json into a typed, index-resolved rule set", () => {
     const rules = loadRules(v0);
     expect(rules.version).toBe("v0");
-    // Index 0 is the empty placeholder; the ten v0 elements follow.
-    expect(rules.elements.length).toBe(11);
+    // Index 0 is the empty placeholder; the ten section-6 elements follow, in order.
+    // (Elements added later, e.g. for milestone 1, come after them.)
+    expect(rules.elements.slice(1, 11).map((e) => e.id)).toEqual([
+      "lobime", "galog", "exgen", "bormite", "queflair", "colomium", "sormite", "lyegen", "ralgen", "hard_rock",
+    ]);
     expect(rules.energies.length).toBe(4);
     for (const el of rules.elements.slice(1)) {
       expect(rules.elementIndex[el.id]).toBe(el.index);

@@ -1,8 +1,11 @@
 // Guards for GAME_OVERVIEW.md section 11.
 // 11.1: no code or data in the core may special-case a machine, so the core and
 //       the rules data must not even mention one by name.
-// 11.4: no Math.random in the core (determinism).
-// 11.5: the core stays headless: it imports nothing from outside src/core.
+//       The same goes for the actor: rule code and rule data must not mention
+//       the player or the pack (docs/MILESTONE_1_SPEC.md). They live in src/game.
+// 11.4: no Math.random in the core or the game layer (determinism).
+// 11.5: both stay headless: the core imports nothing from outside src/core,
+//       the game layer nothing from outside src/core and src/game.
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve, dirname } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -21,6 +24,7 @@ function walk(dir: string): string[] {
 
 const coreFiles = walk(join(ROOT, "src/core"));
 const ruleFiles = walk(join(ROOT, "rules"));
+const gameFiles = walk(join(ROOT, "src/game"));
 
 /** Names of machines and contraptions from GAME_OVERVIEW.md sections 6 and 7. */
 export const MACHINE_NAMES = [
@@ -45,6 +49,9 @@ export const MACHINE_NAMES = [
   "timer",
 ];
 
+/** Names for the actor and what it carries: rule code must not know them. */
+export const ACTOR_NAMES = ["player", "pack", "backpack"];
+
 /** Text as words: camelCase and acronyms split, comment markers and JSON escapes neutralised. */
 function normalise(text: string): string {
   return text
@@ -54,10 +61,10 @@ function normalise(text: string): string {
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2");
 }
 
-function machineMentions(text: string): string[] {
+function machineMentions(text: string, names: string[] = MACHINE_NAMES): string[] {
   const words = normalise(text);
   const hits: string[] = [];
-  for (const name of MACHINE_NAMES) {
+  for (const name of names) {
     // Words may be separated by spaces, line breaks (comments wrapped), underscores or hyphens.
     const pattern = name.split(" ").join("[\\s_-]+");
     const re = new RegExp(`(^|[^a-z])${pattern}(e?s|ed|ing)?([^a-z]|$)`, "i");
@@ -91,18 +98,37 @@ describe("guard: no special-casing in the core", () => {
     expect(machineMentions("clamp(x); cartesian; relayout")).toEqual([]);
   });
 
+  it("the detector catches the actor's names too", () => {
+    expect(machineMentions("if (isPlayer(body)) return", ACTOR_NAMES)).toEqual(["player"]);
+    expect(machineMentions("// the pack's walls", ACTOR_NAMES)).toEqual(["pack"]);
+    expect(machineMentions("const packCells = []", ACTOR_NAMES)).toEqual(["pack"]);
+    expect(machineMentions('{"name": "Backpack"}', ACTOR_NAMES)).toEqual(["backpack"]);
+    expect(machineMentions("unpack(); package; display", ACTOR_NAMES)).toEqual([]);
+  });
+
   for (const file of [...coreFiles, ...ruleFiles]) {
     const rel = relative(ROOT, file);
+    const text = readFileSync(file, "utf8");
+    // JSON is also checked after parsing (escapes resolved), names included.
+    const parsed = file.endsWith(".json") ? JSON.stringify(JSON.parse(text)) : "";
     it(`${rel} mentions no machine`, () => {
-      const text = readFileSync(file, "utf8");
-      // JSON is also checked after parsing (escapes resolved), names included.
-      const parsed = file.endsWith(".json") ? JSON.stringify(JSON.parse(text)) : "";
       expect([...new Set([...machineMentions(text), ...machineMentions(parsed)])]).toEqual([]);
+    });
+    it(`${rel} mentions neither the player nor the pack`, () => {
+      expect([...new Set([...machineMentions(text, ACTOR_NAMES), ...machineMentions(parsed, ACTOR_NAMES)])]).toEqual([]);
+    });
+  }
+
+  // The game layer may name the player and the pack, but still no machine.
+  for (const file of gameFiles) {
+    const rel = relative(ROOT, file);
+    it(`${rel} mentions no machine`, () => {
+      expect(machineMentions(readFileSync(file, "utf8"))).toEqual([]);
     });
   }
 });
 
-describe("guard: determinism and headlessness of the core", () => {
+describe("guard: determinism and headlessness of the core and the game layer", () => {
   // Engine-dependent maths: results may differ between JS engines (co-op needs identical runs).
   const TRANSCENDENTAL = /Math\.(exp|expm1|log|log1p|log2|log10|pow|sin|cos|tan|asin|acos|atan|atan2|sinh|cosh|tanh|asinh|acosh|atanh|hypot|cbrt)\b/;
   const EXPONENT_OP = /[\w)\]]\s*\*\*\s*[\w(]/;
@@ -117,27 +143,34 @@ describe("guard: determinism and headlessness of the core", () => {
     expect(RANDOM.test("const t = Date()")).toBe(true);
   });
 
-  for (const file of coreFiles.filter((f) => f.endsWith(".ts"))) {
-    const rel = relative(ROOT, file);
-    const text = readFileSync(file, "utf8");
-    const code = stripComments(text);
-    it(`${rel} does not use randomness, wall-clock time or engine-dependent maths`, () => {
-      expect(code).not.toMatch(RANDOM);
-      expect(code).not.toMatch(TRANSCENDENTAL);
-      expect(code).not.toMatch(EXPONENT_OP);
-    });
-    it(`${rel} imports only from inside src/core`, () => {
-      const specs = [
-        ...code.matchAll(/(?:import|export)[^'"]*?from\s*['"]([^'"]+)['"]/g),
-        ...code.matchAll(/import\s*['"]([^'"]+)['"]/g),
-        ...code.matchAll(/import\s*\(\s*['"]([^'"]+)['"]/g),
-      ].map((m) => m[1]);
-      expect(/import\s*\(\s*[^'"\s]/.test(code), `${rel} has a dynamic import of a computed path`).toBe(false);
-      for (const spec of specs) {
-        expect(spec.startsWith("."), `${rel} imports package "${spec}"`).toBe(true);
-        const target = resolve(dirname(file), spec);
-        expect(relative(join(ROOT, "src/core"), target).startsWith(".."), `${rel} imports ${spec} from outside the core`).toBe(false);
-      }
-    });
+  const layers: Array<{ files: string[]; allowed: string[] }> = [
+    { files: coreFiles, allowed: ["src/core"] },
+    { files: gameFiles, allowed: ["src/core", "src/game"] },
+  ];
+  for (const { files, allowed } of layers) {
+    for (const file of files.filter((f) => f.endsWith(".ts"))) {
+      const rel = relative(ROOT, file);
+      const text = readFileSync(file, "utf8");
+      const code = stripComments(text);
+      it(`${rel} does not use randomness, wall-clock time or engine-dependent maths`, () => {
+        expect(code).not.toMatch(RANDOM);
+        expect(code).not.toMatch(TRANSCENDENTAL);
+        expect(code).not.toMatch(EXPONENT_OP);
+      });
+      it(`${rel} imports only from ${allowed.join(" and ")}`, () => {
+        const specs = [
+          ...code.matchAll(/(?:import|export)[^'"]*?from\s*['"]([^'"]+)['"]/g),
+          ...code.matchAll(/import\s*['"]([^'"]+)['"]/g),
+          ...code.matchAll(/import\s*\(\s*['"]([^'"]+)['"]/g),
+        ].map((m) => m[1]);
+        expect(/import\s*\(\s*[^'"\s]/.test(code), `${rel} has a dynamic import of a computed path`).toBe(false);
+        for (const spec of specs) {
+          expect(spec.startsWith("."), `${rel} imports package "${spec}"`).toBe(true);
+          const target = resolve(dirname(file), spec);
+          const inside = allowed.some((dir) => !relative(join(ROOT, dir), target).startsWith(".."));
+          expect(inside, `${rel} imports ${spec} from outside ${allowed.join(", ")}`).toBe(true);
+        }
+      });
+    }
   }
 });

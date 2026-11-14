@@ -21,8 +21,8 @@ function site(): Game {
   const g = Game.create(w, PLAYER, 30, topRow(fy));
   // Things in the pack that react to motion, Teta and impact as the player moves about.
   g.pack.place(1, 3, "colomium");
-  g.pack.place(2, 3, "bormite");
-  g.pack.place(4, 3, "queflair");
+  g.pack.place(2, 3, "queflair");
+  g.pack.place(4, 3, "bormite");
   g.pack.place(5, 3, "exgen");
   return g;
 }

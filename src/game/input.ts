@@ -10,9 +10,11 @@ export interface Input {
   swing: { x: number; y: number } | null;
   /** Put the cell in pack cell (slotX, slotY) down in the empty world cell (x, y), or null. */
   place: { x: number; y: number; slotX: number; slotY: number } | null;
+  /** Move the one-cell item in pack cell (x, y) to the next compartment of the pack, or null. */
+  stow?: { x: number; y: number } | null;
 }
 
-export const IDLE: Input = { move: 0, jump: false, swing: null, place: null };
+export const IDLE: Input = { move: 0, jump: false, swing: null, place: null, stow: null };
 
 /** A copy of an input that shares nothing with the original. */
 export function copyInput(i: Input): Input {
@@ -21,6 +23,7 @@ export function copyInput(i: Input): Input {
     jump: i.jump,
     swing: i.swing ? { x: i.swing.x, y: i.swing.y } : null,
     place: i.place ? { x: i.place.x, y: i.place.y, slotX: i.place.slotX, slotY: i.place.slotY } : null,
+    stow: i.stow ? { x: i.stow.x, y: i.stow.y } : null,
   };
 }
 
@@ -53,5 +56,6 @@ export function parseInput(v: unknown): Input {
     if (!Number.isInteger(p.slotX) || !Number.isInteger(p.slotY)) fail("place needs a pack cell (slotX, slotY) of whole numbers");
     place = { x: at.x, y: at.y, slotX: p.slotX as number, slotY: p.slotY as number };
   }
-  return { move: o.move, jump: o.jump, swing: cell(o.swing, "swing"), place };
+  // `stow` is absent in recordings made before it existed: that means null.
+  return { move: o.move, jump: o.jump, swing: cell(o.swing, "swing"), place, stow: cell(o.stow, "stow") };
 }

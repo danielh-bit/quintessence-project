@@ -36,13 +36,15 @@ export interface GameSnapshot {
 
 /** Something the player's hands did in the last step (for sound and animation; not simulation state). */
 export interface GameEvent {
-  /** "swing": a blow landed. "take": a cell went into the pack. "place": a cell was put down. */
-  kind: "swing" | "take" | "place";
-  /** World cell it happened at. */
+  /** "swing": a blow landed. "take": a cell went into the pack. "place": a cell was put down. "stow": an item moved to another compartment of the pack. */
+  kind: "swing" | "take" | "place" | "stow";
+  /** World cell it happened at (for "stow": the pack cell the item arrived in). */
   x: number;
   y: number;
   /** Element id of the cell involved. */
   element: string;
+  /** For "stow": the id of the item's body in the pack, so a view can keep following it. */
+  body?: number;
 }
 
 export class Game {
@@ -155,17 +157,52 @@ export class Game {
     if (struck >= 0) this.take(struck);
   }
 
+  /**
+   * The pack's compartments: the connected areas of room in its layout, each a
+   * list of [x, y] cells in reading order, the compartments themselves in
+   * reading order of their first cell.
+   */
+  compartments(): Array<Array<[number, number]>> {
+    const layout = this.config.pack.layout;
+    const seen = new Set<number>();
+    const out: Array<Array<[number, number]>> = [];
+    const W = layout[0].length;
+    for (let y = 0; y < layout.length; y++) {
+      for (let x = 0; x < W; x++) {
+        if (layout[y][x] !== "." || seen.has(y * W + x)) continue;
+        const part: Array<[number, number]> = [];
+        const stack: Array<[number, number]> = [[x, y]];
+        seen.add(y * W + x);
+        while (stack.length > 0) {
+          const [cx, cy] = stack.pop()!;
+          part.push([cx, cy]);
+          for (const [nx, ny] of [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]] as const) {
+            if (ny < 0 || ny >= layout.length || nx < 0 || nx >= W || layout[ny][nx] !== "." || seen.has(ny * W + nx)) continue;
+            seen.add(ny * W + nx);
+            stack.push([nx, ny]);
+          }
+        }
+        part.sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+        out.push(part);
+      }
+    }
+    return out;
+  }
+
   /** The first free cell at the top of the pack's room, in reading order, or -1 if it is full. */
   packEntry(): number {
+    return this.entryIn(this.compartments().flat());
+  }
+
+  /** The first free cell at the top of the given room cells (nothing but wall above it), or -1. */
+  private entryIn(room: Array<[number, number]>): number {
     const pack = this.pack;
     const layout = this.config.pack.layout;
-    for (let y = 0; y < layout.length; y++) {
-      for (let x = 0; x < layout[y].length; x++) {
-        if (layout[y][x] !== ".") continue;
-        // Room at the top: nothing but wall above it.
-        if (y > 0 && layout[y - 1][x] === ".") continue;
-        if (pack.elem[pack.idx(x, y)] === 0) return pack.idx(x, y);
-      }
+    const sorted = [...room].sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+    for (const [x, y] of sorted) {
+      // Room at the top: nothing but wall above it.
+      if (y > 0 && layout[y - 1][x] === ".") continue;
+      if (pack.elem[pack.idx(x, y)] === 0) return pack.idx(x, y);
     }
     return -1;
   }
@@ -256,6 +293,23 @@ export class Game {
           w.recomputeMass(b);
           this.cooldown = this.config.place.cooldown;
           this.events.push({ kind: "place", x, y, element });
+        }
+      }
+    }
+    // The hand: move an item to the next compartment of the pack.
+    if (input.stow && this.cooldown === 0) {
+      const { x, y } = input.stow;
+      const pack = this.pack;
+      const rooms = this.compartments();
+      const from = rooms.findIndex((r) => r.some(([rx, ry]) => rx === x && ry === y));
+      const held = from >= 0 ? pack.bodyAt(x, y) : undefined;
+      if (from >= 0 && rooms.length > 1 && held && held.cells.length === 1) {
+        const to = this.entryIn(rooms[(from + 1) % rooms.length]);
+        if (to >= 0) {
+          const element = pack.rules.elements[pack.elem[pack.idx(x, y)]].id;
+          const nb = pack.takeCell(pack, pack.idx(x, y), to);
+          this.cooldown = this.config.place.cooldown;
+          this.events.push({ kind: "stow", x: pack.xOf(to), y: pack.yOf(to), element, body: nb.id });
         }
       }
     }

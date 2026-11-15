@@ -38,7 +38,7 @@ function start(): void {
   const ctx = canvas.getContext("2d")!;
 
   // UI state: never part of the simulation.
-  const ui = { packOpen: false, inShip: false, slot: null as Slot | null, dev: false, facing: 1 as -1 | 1, jolt: 0, time: 0 };
+  const ui = { stowNext: false, follow: 0, packOpen: false, inShip: false, slot: null as Slot | null, dev: false, facing: 1 as -1 | 1, jolt: 0, time: 0 };
   const flashes: Flash[] = [];
 
   const nearHatch = (): boolean => {
@@ -51,6 +51,14 @@ function start(): void {
   };
 
   const snapSlot = (): void => {
+    if (ui.follow) {
+      const b = game.pack.bodies.get(ui.follow);
+      if (b && b.cells.length === 1) {
+        ui.slot = { x: game.pack.xOf(b.cells[0]), y: game.pack.yOf(b.cells[0]) };
+        return;
+      }
+      ui.follow = 0;
+    }
     const occ = occupiedSlots(game);
     if (occ.length === 0) {
       ui.slot = null;
@@ -69,7 +77,11 @@ function start(): void {
       if (ui.inShip) ui.inShip = false;
       else if (nearHatch()) ui.inShip = true;
     },
+    stow: () => {
+      ui.stowNext = true;
+    },
     cycleSlot: (dir) => {
+      ui.follow = 0;
       const occ = occupiedSlots(game);
       if (occ.length === 0) return;
       const cur = ui.slot;
@@ -86,7 +98,10 @@ function start(): void {
       const x = Math.floor((px - r.x) / r.tile);
       const y = Math.floor((py - r.y) / r.tile);
       if (x < 0 || y < 0 || x >= r.cols || y >= r.rows) return false;
-      if (game.isPackRoom(x, y)) ui.slot = { x, y };
+      if (game.isPackRoom(x, y)) {
+        ui.slot = { x, y };
+        ui.follow = 0;
+      }
       return true;
     },
     gesture: () => voice.unlock(),
@@ -111,11 +126,17 @@ function start(): void {
         jump: controls.jump,
         swing: controls.swing && aim ? { x: aim.x, y: aim.y } : null,
         place: controls.place && aim && ui.slot ? { x: aim.x, y: aim.y, slotX: ui.slot.x, slotY: ui.slot.y } : null,
+        stow: ui.stowNext && ui.slot ? { x: ui.slot.x, y: ui.slot.y } : null,
       });
+      ui.stowNext = false;
       if (move !== 0) ui.facing = move as -1 | 1;
     }
     game.step(inp);
-    for (const e of game.events) flashes.push({ x: e.x, y: e.y, life: 8, kind: e.kind === "place" ? "place" : "swing" });
+    for (const e of game.events) {
+      // A move inside the pack: keep the selection on the item as it falls into place.
+      if (e.kind === "stow") ui.follow = e.body ?? 0;
+      else flashes.push({ x: e.x, y: e.y, life: 8, kind: e.kind === "place" ? "place" : "swing" });
+    }
     // A jolt: a sudden change of the player's velocity that is not a jump, or the pack's walls giving way.
     const b = game.body();
     if (b) {

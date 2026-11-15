@@ -17,6 +17,8 @@ export interface ControlHooks {
   togglePack(): void;
   toggleShip(): void;
   cycleSlot(dir: 1 | -1): void;
+  /** Move the selected item to the other compartment of the pack. */
+  stow(): void;
   /** A click on the canvas (client px) that is not a swing or a place: used to pick pack cells. */
   click(clientX: number, clientY: number): boolean;
   /** Called on any first gesture (to start audio). */
@@ -56,6 +58,7 @@ export function bindControls(target: HTMLElement, hooks: ControlHooks): Controls
     } else if (e.code === "KeyE") hooks.toggleShip();
     else if (e.code === "KeyQ") hooks.cycleSlot(-1);
     else if (e.code === "KeyR") hooks.cycleSlot(1);
+    else if (e.code === "KeyF") hooks.stow();
   });
   window.addEventListener("keyup", (e) => {
     if (set(e.code, false)) e.preventDefault();

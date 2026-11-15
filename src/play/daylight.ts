@@ -6,7 +6,7 @@ import type { World } from "../core";
 
 /** How fast daylight fades going through empty space and through rock, per cell. */
 const AIR_FADE = 0.1;
-const ROCK_FADE = 0.2;
+const ROCK_FADE = 0.15;
 
 /**
  * Daylight 0..1 per cell. Cells open to the sky have 1. It falls off with

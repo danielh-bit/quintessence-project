@@ -12,12 +12,14 @@ import { Perception } from "../ui/perception";
 const VIEW_CELLS_X = 56;
 const VIEW_CELLS_Y = 32;
 /** Unlit matter shows this much of its colour on the surface and deep underground. */
-const AMBIENT_DAY = 0.42;
+const AMBIENT_DAY = 0.5;
 const AMBIENT_NIGHT = 0.035;
 const SKY: [number, number, number] = [22, 30, 50];
 /** Air that Glow lights is only visible against the dark; open sky washes it out. */
 const HAZE_WASH = 0.95;
 const AIR_BASE = [6, 7, 10];
+/** Light on matter: a warm brightening on top of the lit colour, so a glow reads as light, not just less dark. */
+const LIGHT_BOOST = [78, 58, 30];
 /** Camera: share of the distance to the target covered per frame, and look-ahead in cells per cell/tick. */
 const FOLLOW = 0.12;
 const LOOK_AHEAD = 18;
@@ -171,7 +173,7 @@ export class View {
     const rgb = this.rgb;
     const heat = w.rules.energies.filter((e) => e.spread === "diffusion").map((e) => e.index);
     const hotCells: number[] = [];
-    const hotLimit = p.heatRef / 6;
+    const hotLimit = p.heatRef / 10;
     for (let y = y0; y < y1; y++) {
       let i = y * w.width + x0;
       let o = (y - y0) * img.width * 4;
@@ -182,9 +184,18 @@ export class View {
         if (!s.flat && (w.elem[i] === 0 || asEmpty)) {
           // Open air carries the colour of the sky; deeper air is black. Lit haze fades in daylight.
           const wash = 1 - HAZE_WASH * day;
-          rgb[0] = AIR_BASE[0] + (rgb[0] - AIR_BASE[0]) * wash + SKY[0] * day;
-          rgb[1] = AIR_BASE[1] + (rgb[1] - AIR_BASE[1]) * wash + SKY[1] * day;
-          rgb[2] = AIR_BASE[2] + (rgb[2] - AIR_BASE[2]) * wash + SKY[2] * day;
+          // (Air with no light and no sky is as black as the rock around it.)
+          rgb[0] = AIR_BASE[0] * day + (rgb[0] - AIR_BASE[0]) * wash + SKY[0] * day;
+          rgb[1] = AIR_BASE[1] * day + (rgb[1] - AIR_BASE[1]) * wash + SKY[1] * day;
+          rgb[2] = AIR_BASE[2] * day + (rgb[2] - AIR_BASE[2]) * wash + SKY[2] * day;
+        }
+        if (!s.flat && w.elem[i] !== 0 && !asEmpty) {
+          const l = p.light(w, i);
+          if (l > 0) {
+            rgb[0] += LIGHT_BOOST[0] * l;
+            rgb[1] += LIGHT_BOOST[1] * l;
+            rgb[2] += LIGHT_BOOST[2] * l;
+          }
         }
         d[o] = rgb[0];
         d[o + 1] = rgb[1];

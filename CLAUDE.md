@@ -3,7 +3,7 @@
 Read `GAME_OVERVIEW.md` before changing anything. This repo holds the **rules sandbox** and the start of the **2D demo**.
 
 - The sandbox answers one question: do the v0 local rules (overview §6) produce the §6 machines on their own? It stays as a developer tool.
-- The demo is built in six milestones (`docs/ROADMAP.md`). Milestone 1, the crash site, is in progress: its headless simulation foundations are built (`docs/HANDOFF_M1.md`); the game itself (rendering, controls, map, audio, UI) is not yet.
+- The demo is built in six milestones (`docs/ROADMAP.md`). Milestone 1, the crash site, is playable: `npm run game`. Its simulation foundations are described in `docs/HANDOFF_M1.md`; what to try first is the playtest checklist in `docs/ROADMAP.md`.
 
 ## Core pillars (overview §3), in short
 
@@ -31,7 +31,9 @@ Read `GAME_OVERVIEW.md` before changing anything. This repo holds the **rules sa
 - `src/game/`: the headless game layer: the player's body, the pack, input and replay. It acts on the world only through the core's outside actions.
 - `data/player.json`: the player's body, movement, pick and pack layout.
 - `src/scenarios/`: machine setups built from plain blocks. They may name machines; the core may not.
-- `src/ui/`: the browser sandbox.
+- `src/ui/`: the browser sandbox (developer tool).
+- `src/play/`: the browser game (`game.html`): view and camera, controls, HUD (selected slot and pack view), the ship screen, light and sound. It only reads the simulation; the world changes only through `Game.step(input)`.
+- `maps/crash-site.txt`: the crash site as an editable ASCII picture with a legend, loaded by `src/game/map.ts`.
 - `tests/`: core unit tests, scenario (machine) tests, game tests (`tests/game/`, scripted inputs), and the guard.
 - `scenes/`: every scenario exported as scene JSON (open with the sandbox's Load button).
 - `docs/SIMULATION.md`: design of the update model, the interpretations of the overview, how each machine arises, and the milestone 1 decisions. `docs/TUNING.md`: log of every parameter change and why, results per machine, and open design observations.
@@ -45,11 +47,25 @@ All seven §6 machines emerge from the generic rules, and each has a black-box t
 
 Built and tested headless: the player as an ordinary bonded body driven by per-tick input with exact replay; the pack as a carried grid run by the same rules; mining by knocking cells loose (grip and shock), taking into the pack, and placing loose cells. Open: Bormite dust is still flung rather than drifting (`docs/TUNING.md`, entries 9 and 13).
 
-## Commands
+## Status (milestone 1, the game)
+
+Playable: the crash-site map, the game entry point with camera, keyboard and mouse controls, the pack view, the ship's (empty) interior, darkness and light, heat shimmer, hum as Web Audio, and the minimal HUD. Not changed: the core, `rules/`, and every earlier test. Open: Bormite dust is still flung (see `docs/ROADMAP.md`, "Open questions"). Nothing in the player's view states a property.
+
+## Running the game
 
 ```
 npm install
-npm run dev        # sandbox UI at http://localhost:5173 (developer overlay: key D)
+npm run game       # the game: http://localhost:5173/game.html (opens it for you)
+```
+
+Controls: `A`/`D` or arrows walk, `Space`/`W` jump; the mouse aims at cells within reach; left click swings the pick, right click puts the selected pack cell down; `Tab` or `I` opens and closes the pack; `Q`/`R` or the wheel pick another pack cell (or click a cell in the open pack); `E` enters and leaves the ship at its hatch. Sound starts on your first key press or click. `` ` `` (backquote) toggles a developer view (raw colours, and what is in the cell under the mouse); it is off by default. Add `?debug` to the address to reach `window.quintessence` (game, view, ui) from the console.
+
+To change the level, edit `maps/crash-site.txt` (legend at the top, one character per cell) and reload; mistakes are reported with the line or cell.
+
+## Commands
+
+```
+npm run dev        # sandbox UI at http://localhost:5173 (developer overlay: key D); the game is at /game.html
 npm test           # all tests, headless: core units, the seven machines, scenes, the game layer, guard
 npm run typecheck  # core without DOM, then everything
 npm run build      # typecheck + production build

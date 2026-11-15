@@ -6,6 +6,7 @@
   "description": "Rules sandbox for The Quintessence Project: do the v0 local rules produce the section-6 machines on their own?",
   "scripts": {
     "dev": "vite",
+    "game": "vite --open /game.html",
     "build": "npm run typecheck && vite build",
     "preview": "vite preview",
     "test": "vitest run",

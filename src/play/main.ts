@@ -13,6 +13,8 @@ import { Perception } from "../ui/perception";
 import { bindControls } from "./controls";
 import { computeDaylight } from "./daylight";
 import { drawPack, drawSlot, occupiedSlots, packRect, type Slot } from "./hud";
+import { HumVoice } from "./audio";
+import { listen, loudRef, soundEnergies } from "./hum";
 import { drawShip } from "./ship";
 import { type Flash, View } from "./view";
 
@@ -30,6 +32,9 @@ function start(): void {
   const daylight = computeDaylight(game.world, loaded.sky);
   const perception = new Perception(rules);
   const view = new View(canvas, perception);
+  const voice = new HumVoice();
+  const heard = soundEnergies(rules);
+  const heardRef = heard.map((e) => loudRef(rules, e));
   const ctx = canvas.getContext("2d")!;
 
   // UI state: never part of the simulation.
@@ -84,7 +89,7 @@ function start(): void {
       if (game.isPackRoom(x, y)) ui.slot = { x, y };
       return true;
     },
-    gesture: () => {},
+    gesture: () => voice.unlock(),
   });
 
   /** The world cell under the mouse, if the hands reach it. */
@@ -133,6 +138,7 @@ function start(): void {
     if (n > MAX_TICKS_PER_FRAME) n = MAX_TICKS_PER_FRAME;
     for (let k = 0; k < n; k++) tick();
     snapSlot();
+    voice.update(listen(game, heard, heardRef));
     ui.time = now / 1000;
     for (let k = flashes.length - 1; k >= 0; k--) if (--flashes[k].life <= 0) flashes.splice(k, 1);
 
@@ -157,6 +163,8 @@ function start(): void {
     }
   });
   requestAnimationFrame(frame);
+  // For tests and tinkering: with ?debug in the address, the game and view can be reached from the console.
+  if (location.search.includes("debug")) Object.assign(window, { quintessence: { game, view, ui, controls } });
 }
 
 try {

@@ -90,6 +90,15 @@ export class View {
     return { x: Math.floor((px - this.originX) / this.cs), y: Math.floor((py - this.originY) / this.cs) };
   }
 
+  /** Client (mouse) position of the middle of a world cell: the inverse of cellAt. */
+  clientOf(x: number, y: number): { x: number; y: number } {
+    const r = this.canvas.getBoundingClientRect();
+    return {
+      x: r.left + (((x + 0.5) * this.cs + this.originX) * r.width) / this.canvas.width,
+      y: r.top + (((y + 0.5) * this.cs + this.originY) * r.height) / this.canvas.height,
+    };
+  }
+
   /** Move the camera towards the player. `frames` is how many display frames have passed. */
   follow(game: Game): void {
     const b = game.body();

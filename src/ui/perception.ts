@@ -77,8 +77,9 @@ export class Perception {
    * Perceived colour of cell i, written to out[0..2] (0..255 floats).
    * `asEmpty` draws the cell as the air it sits in (used under moving bodies).
    * `flat` (developer overlay only) shows raw element colours without lighting.
+   * `ambient` is how much of its colour unlit matter shows (the game dims it underground).
    */
-  shade(w: World, i: number, out: Float64Array, flat: boolean, asEmpty = false): void {
+  shade(w: World, i: number, out: Float64Array, flat: boolean, asEmpty = false, ambient = AMBIENT): void {
     const el = asEmpty ? 0 : w.elem[i];
     if (flat) {
       const c = el === 0 ? EMPTY_FLAT : this.colors[el];
@@ -97,7 +98,7 @@ export class Perception {
       return;
     }
     const c = this.colors[el];
-    const k = AMBIENT + (1 - AMBIENT) * l;
+    const k = ambient + (1 - ambient) * l;
     let r = c[0] * k + WARM[0] * l * 0.12;
     let g = c[1] * k + WARM[1] * l * 0.12;
     let b = c[2] * k + WARM[2] * l * 0.12;

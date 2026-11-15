@@ -3,9 +3,13 @@
 // range. A ray stops after the first cell that blocks the energy; that cell is
 // still lit (it is the surface the light lands on). A ray may not slip
 // diagonally past the corner of a blocking cell, so a diagonal wall casts a
-// full shadow. Each cell takes a source's
-// light once (stamped), with linear falloff over Euclidean distance and a
-// direction pointing away from the source.
+// full shadow. Running into a corner, though, is a way of landing on a surface:
+// when the step the ray was making would have passed a corner and the cell it
+// was heading for blocks the energy, that cell is lit (the ray still ends
+// there). Without this, floors and ceilings seen at a shallow angle, the way a
+// light standing on a cave floor sees them, would never be lit. Each cell
+// takes a source's light once (stamped), with linear falloff over Euclidean
+// distance and a direction pointing away from the source.
 
 import type { World } from "../world";
 import { falloff, type Scratch, type Sources } from "./scratch";
@@ -71,7 +75,9 @@ export function spreadRays(
         }
         if (x < 0 || y < 0 || x >= W || y >= H) return;
         // A diagonal step may not pass the corner of a blocking cell (as for radial spread).
-        if (x !== px && y !== py && (blocksAt(x, py) || blocksAt(px, y))) return;
+        const cornered = x !== px && y !== py && (blocksAt(x, py) || blocksAt(px, y));
+        // Cornered: the ray ends here, and only a blocking cell (a surface) is lit.
+        if (cornered && !blocksAt(x, y)) return;
         const dx = x - sx;
         const dy = y - sy;
         const d = Math.sqrt(dx * dx + dy * dy);
@@ -82,11 +88,11 @@ export function spreadRays(
           const val = B * falloff(d, range);
           field[c] += val;
           if (fromOutside) outside[c] += val;
-      else if (fromCarried) leaked[c] += val;
+          else if (fromCarried) leaked[c] += val;
           dirX[c] += (val * dx) / d;
           dirY[c] += (val * dy) / d;
         }
-        if (elem[c] !== 0 && els[elem[c]].blocks[energy]) return;
+        if (cornered || (elem[c] !== 0 && els[elem[c]].blocks[energy])) return;
       }
     };
 

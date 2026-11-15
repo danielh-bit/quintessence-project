@@ -163,6 +163,16 @@ The open question from entry 9: how to make Bormite dust drift instead of being 
 - **Also to redo if adopted:** the pack wall numbers (entry 11) and three pack tests, which are tuned to today's push.
 - **Not decided.** Options: adopt it and re-tune the runaway engine (a faster flow for strong fields, or stronger Lyegen), accept a gentler version of the drift, or leave the push as it is.
 
+### 14. Glow: a ray stopped at a corner still lights the surface it ran into (milestone 1, code; no rule value changed)
+
+Playing the cave showed that a light barely lights anything. Measured in a cave-sized chamber (23 x 7, a Queflair on its floor): the air was lit, but only 15 of the 48 wall, floor and ceiling cells in view were. The floor the light stands on stayed dark except the cell under it.
+
+- **Cause:** a Glow ray may not step diagonally past the corner of a blocking cell (this is what makes a diagonal wall opaque). A light on a floor reaches the floor and ceiling only by shallow rays, and each of those ends with a diagonal step onto the surface, which the rule stopped before lighting it. So every surface hit at a shallow angle stayed black.
+- **Change** (`src/core/fields/rays.ts`, no data): when the step a ray was making would pass a corner, and the cell it was heading for blocks Glow, that cell is lit and the ray ends there. If the cell it was heading for is open air, the ray ends unlit, as before, so a diagonal wall still seals.
+- **Measured:** lit surface cells 15/48 to 37/48 in that chamber. In a 5-tall passage the floor is lit out to about 7 cells and the ceiling to about 14 (two new tests in `tests/core/fields.test.ts`; the first fails without the change). Every earlier test passes unchanged, the latch, light link and light switch included.
+- **Still true:** rays are cast to the edge of the range square, so beyond about 10 cells they are sparser than cells and some floor and ceiling cells are skipped. Casting to every cell in range (or shadowcasting) would close that; not done.
+- **Also:** the game's view now adapts its exposure to the dark (`src/play/view.ts`), a presentation change only.
+
 ## Results per machine
 
 | Machine | Emerges? | Notes |

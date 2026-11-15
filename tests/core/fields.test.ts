@@ -122,6 +122,31 @@ describe("Glow (ray): straight lines of sight", () => {
     expect(w.fieldAt("glow", 40, 4)).toBe(0);
   });
 
+  it("lights the floor and ceiling it sees at a shallow angle (a light standing in a passage)", () => {
+    // A passage 5 cells tall, closed all round, with a light on its floor.
+    const w = makeWorld(40, 9);
+    for (let x = 0; x < 40; x++) {
+      w.place(x, 1, "hard_rock", { anchored: true });
+      w.place(x, 7, "hard_rock", { anchored: true });
+    }
+    emitter(w, 5, 6, "queflair", 10);
+    computeFields(w);
+    // The floor and ceiling near the light are lit, however shallow the angle. (Farther off,
+    // rays are sparser than cells and some surface cells are skipped: not guaranteed.)
+    for (let x = 6; x <= 12; x++) expect(w.fieldAt("glow", x, 7), `floor ${x}`).toBeGreaterThan(0);
+    for (let x = 6; x <= 19; x++) expect(w.fieldAt("glow", x, 1), `ceiling ${x}`).toBeGreaterThan(0);
+  });
+
+  it("still casts a full shadow behind a wall that touches the floor at a corner", () => {
+    const w = makeWorld(40, 9);
+    for (let x = 0; x < 40; x++) w.place(x, 7, "hard_rock", { anchored: true });
+    for (let y = 1; y <= 6; y++) w.place(20, y, "hard_rock", { anchored: true });
+    emitter(w, 5, 6, "queflair", 10);
+    computeFields(w);
+    for (let y = 1; y <= 6; y++) for (let x = 21; x < 40; x++) expect(w.fieldAt("glow", x, y), `${x},${y}`).toBe(0);
+    expect(w.fieldAt("glow", 20, 4)).toBeGreaterThan(0); // the wall's face is lit
+  });
+
   it("does not reach beyond its range", () => {
     const R = V0.energies[GLOW].range;
     const w = makeWorld(R + 20, 3);

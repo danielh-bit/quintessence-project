@@ -58,7 +58,7 @@ npm install
 npm run game       # the game: http://localhost:5173/game.html (opens it for you)
 ```
 
-Controls: `A`/`D` or arrows walk, `Space`/`W` jump; the mouse aims at cells within reach; left click swings the pick, right click puts the selected pack cell down; `Tab` or `I` opens and closes the pack; `Q`/`R` or the wheel pick another pack cell (or click a cell in the open pack); `E` enters and leaves the ship at its hatch. Sound starts on your first key press or click. `` ` `` (backquote) toggles a developer view (raw colours, and what is in the cell under the mouse); it is off by default. Add `?debug` to the address to reach `window.quintessence` (game, view, ui) from the console.
+Controls: `A`/`D` or arrows walk, `Space`/`W` jump; the mouse aims at cells within reach; left click swings the pick, right click puts the selected pack cell down; `Tab` or `I` opens and closes the pack; `Q`/`R` or the wheel pick another pack cell (or click a cell in the open pack); `F` moves the selected item to the other compartment of the pack (the selection follows it); `E` enters and leaves the ship at its hatch. Sound starts on your first key press or click. `` ` `` (backquote) toggles a developer view (raw colours, and what is in the cell under the mouse); it is off by default. Add `?debug` to the address to reach `window.quintessence` (game, view, ui) from the console.
 
 To change the level, edit `maps/crash-site.txt` (legend at the top, one character per cell) and reload; mistakes are reported with the line or cell.
 

@@ -201,9 +201,17 @@ export class Game {
       if (dv !== 0) {
         const f = b.mass * dv;
         w.push(b.id, f, 0);
-        // The legs push back on whatever loose thing they stand on.
+        // The legs push back on whatever loose thing they stand on, but only as
+        // hard as the ground can hold that thing in place: the core's friction
+        // changes a resting body's speed by at most friction x gravity per tick,
+        // whatever the load. A harder push would throw a light block out from
+        // under the walker, tick after tick, at the world's speed limit.
         if (!b.restsOnTerrain && b.restsOn.length > 0) {
-          for (const id of b.restsOn) w.push(id, -f / b.restsOn.length, 0);
+          let held = 0;
+          for (const id of b.restsOn) held += w.bodies.get(id)!.mass;
+          const grip = w.rules.world.friction * w.rules.world.gravity * held;
+          const back = f > grip ? grip : f < -grip ? -grip : f;
+          for (const id of b.restsOn) w.push(id, -back / b.restsOn.length, 0);
         }
       }
       if (input.jump) w.kick(b.id, 0, -jump.speed);

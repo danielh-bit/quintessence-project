@@ -20,6 +20,9 @@ const HAZE_WASH = 0.95;
 const AIR_BASE = [6, 7, 10];
 /** Light on matter: a warm brightening on top of the lit colour, so a glow reads as light, not just less dark. */
 const LIGHT_BOOST = [78, 58, 30];
+/** How far the eye opens in full dark (times as strong as in daylight), and how fast it adapts per frame. */
+const DARK_EXPOSURE = 4;
+const ADAPT = 0.02;
 /** Camera: share of the distance to the target covered per frame, and look-ahead in cells per cell/tick. */
 const FOLLOW = 0.12;
 const LOOK_AHEAD = 18;
@@ -64,6 +67,8 @@ export class View {
   private baseImg: ImageData | null = null;
   private readonly rgb = new Float64Array(3);
   private snapped = false;
+  /** The eye's adaptation, 1 (daylight) to DARK_EXPOSURE (full dark). Presentation only. */
+  private exposure = 1;
   readonly perception: Perception;
 
   constructor(canvas: HTMLCanvasElement, perception: Perception) {
@@ -135,6 +140,13 @@ export class View {
     const shake = s.jolt * s.jolt;
     const sx = shake * Math.sin(s.time * 83) * cs * 0.5;
     const sy = shake * Math.cos(s.time * 71) * cs * 0.5;
+    // The eye opens in the dark and closes in the light, slowly: dim light reads brighter underground.
+    const b0 = game.bounds();
+    if (b0) {
+      const here = s.daylight[w.idx(b0.x + (b0.width >> 1), b0.y + (b0.height >> 1))];
+      this.exposure += (1 + (DARK_EXPOSURE - 1) * (1 - here) - this.exposure) * ADAPT;
+    }
+    p.exposure = this.exposure;
     this.originX = Math.round(cw / 2 - this.camX * cs + sx);
     this.originY = Math.round(ch / 2 - this.camY * cs + sy);
     const ox = this.originX;

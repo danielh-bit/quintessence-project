@@ -45,6 +45,11 @@ export class Perception {
   readonly glowRef: Float64Array;
   /** Per element colour from the rules (index 0 = empty). */
   readonly colors: RGB[];
+  /**
+   * How much the eye has opened to the dark: light is seen this many times as
+   * strong. 1 in the sandbox; the game raises it while the player is in the dark.
+   */
+  exposure = 1;
 
   constructor(rules: RuleSet) {
     this.lightEnergies = rules.energies.filter((e) => e.spread === "ray").map((e) => e.index);
@@ -70,7 +75,7 @@ export class Perception {
   light(w: World, i: number): number {
     let L = 0;
     for (const e of this.lightEnergies) L += w.field[e][i];
-    return L > 0 ? 1 - Math.exp(-L / this.lightRef) : 0;
+    return L > 0 ? 1 - Math.exp((-L * this.exposure) / this.lightRef) : 0;
   }
 
   /**

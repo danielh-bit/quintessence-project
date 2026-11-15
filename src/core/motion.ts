@@ -43,7 +43,9 @@ export function applyMotion(w: World): void {
   computeSupport(w);
 
   const list = w.sortedBodies();
-  for (const b of list) integrate(w, b, world.gravity, world.friction, world.airDrag, world.maxSpeed);
+  // Top of each pile first: what rests on a body settles its friction (and passes
+  // its share to its support) before the support settles its own.
+  for (const b of topDown(list)) integrate(w, b, world.gravity, world.friction, world.airDrag, world.maxSpeed);
 
   const movers = list
     .filter((b) => b.vx !== 0 || b.vy !== 0)
@@ -87,7 +89,11 @@ function integrate(w: World, b: Body, g: number, mu: number, drag: number, maxSp
     // towards the velocity of what it rests on (terrain stands still).
     const normal = ay > 0 ? ay : 0;
     if (ay > 0) ay = 0;
-    b.vx = applyFriction(w, b, b.vx + ax, mu * normal);
+    // What presses the body onto its support is its own weight and whatever
+    // rests on it: friction grips with the whole of it, so a light block under
+    // a heavy load is held fast, not carried away by what stands on it.
+    const pressing = 1 + externalLoad(w, b) / m;
+    b.vx = applyFriction(w, b, b.vx + ax, mu * normal * pressing);
     b.vy += ay;
     // A support that comes up at the body is not held off: they meet.
     if (jy > 0) b.vy += jy;
@@ -109,6 +115,54 @@ function integrate(w: World, b: Body, g: number, mu: number, drag: number, maxSp
   b.vy = clamp(b.vy + b.jy, maxSpeed);
   // Moving up means no longer held by the support.
   if (b.vy < 0) b.resting = false;
+}
+
+/**
+ * Bodies ordered so that each comes before the loose bodies it rests on (ties and
+ * loops: by id). `list` is in id order.
+ */
+function topDown(list: Body[]): Body[] {
+  const below = new Map<number, number>();
+  for (const b of list) below.set(b.id, 0);
+  for (const b of list) for (const id of b.restsOn) if (below.has(id)) below.set(id, below.get(id)! + 1);
+  const byId = new Map<number, Body>();
+  for (const b of list) byId.set(b.id, b);
+  const out: Body[] = [];
+  const done = new Set<number>();
+  // Repeatedly take, in id order, the bodies with nothing left resting on them.
+  let ready = list.filter((b) => below.get(b.id) === 0);
+  while (ready.length > 0) {
+    const next: Body[] = [];
+    for (const b of ready) {
+      out.push(b);
+      done.add(b.id);
+    }
+    for (const b of ready) {
+      for (const id of b.restsOn) {
+        if (!below.has(id)) continue;
+        const n = below.get(id)! - 1;
+        below.set(id, n);
+        if (n === 0) next.push(byId.get(id)!);
+      }
+    }
+    next.sort((p, q) => p.id - q.id);
+    ready = next;
+  }
+  // Bodies that rest on each other in a loop: whatever is left, in id order.
+  for (const b of list) if (!done.has(b.id)) out.push(b);
+  return out;
+}
+
+/** The mass resting on a body from outside it: the load on the top cell of each column of its cells. */
+function externalLoad(w: World, b: Body): number {
+  const W = w.width;
+  const set = b.cells.length > 1 ? new Set(b.cells) : null;
+  let total = 0;
+  for (const c of b.cells) {
+    if (set && set.has(c - W)) continue;
+    total += w.load[c];
+  }
+  return total;
 }
 
 /**

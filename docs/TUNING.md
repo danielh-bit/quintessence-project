@@ -173,6 +173,16 @@ Playing the cave showed that a light barely lights anything. Measured in a cave-
 - **Still true:** rays are cast to the edge of the range square, so beyond about 10 cells they are sparser than cells and some floor and ceiling cells are skipped. Casting to every cell in range (or shadowcasting) would close that; not done.
 - **Also:** the game's view now adapts its exposure to the dark (`src/play/view.ts`), a presentation change only.
 
+### 15. Friction grips with the load, and bodies integrate top-down (milestone 1, code; no rule value changed)
+
+Walking on a loose block did not throw it out any more (entry 8 of the game layer: the legs' push-back is capped), but the block stuck to the player's feet and was carried along at walking speed.
+
+- **Cause 1: the load was ignored.** The core's friction capacity for a resting body was `μ·g` per tick, whatever sat on it. A heavy walker's feet could drag a light block with the walker's weight (`M·μ·g`), but the floor held the block with the block's own weight only. Friction grips with everything that presses the body down.
+- **Cause 2: the order.** Bodies integrated in id order. A body's friction impulse is given to its support, so if the support had a lower id it had already settled its friction that tick and went on moving with the impulse. In the game the rubble is made before the player, so the walker's blocks were carried.
+- **Changes** (`src/core/motion.ts`): the normal force in friction is multiplied by `1 + external load / mass` (the load on the top cell of each column of the body, from `w.load`), and bodies integrate top of the pile first (bodies resting on others before the ones they rest on; ties and loops by id).
+- **Measured:** a player walking over 1 or 3 blocks of Lobime, Queflair, Bormite or Galog, either way, with the blocks made before or after the player: the blocks do not move (speed 0, same cells). Before: carried along at 0.08 to 0.15 cells/tick, a Bormite block several cells. Unloaded things are unchanged: cargo on a sliding cart is still dragged along (a core test).
+- **All earlier tests pass unchanged**, the seven machines and the scenes included. New tests: two in `tests/core/motion.test.ts`; `tests/game/legs.test.ts` now checks that blocks stay put in both orders (the tests fail without either change).
+
 ## Results per machine
 
 | Machine | Emerges? | Notes |

@@ -328,3 +328,29 @@ describe("review fixes: motion", () => {
     expect(() => loadScene(V0, { ...base, cells: [cell], bodies: [{ id: 1, ox: 50 }] })).toThrow(/offset/);
   });
 });
+
+describe("friction grips with the load on a body", () => {
+  it("a light block under a heavy one is not dragged along by the heavy one sliding on it", () => {
+    const w = makeWorld(40, 10);
+    floor(w);
+    w.place(10, 8, "bormite"); // very light, on the floor
+    w.place(10, 7, "lobime"); // 15 times heavier, on top of it
+    w.setVelocity(10, 7, 0.14, 0);
+    for (let t = 0; t < 40; t++) w.step();
+    expect(w.find("bormite")).toEqual([[10, 8]]);
+    expect(w.bodyAt(10, 8)!.vx).toBe(0);
+  });
+
+  it("an unloaded light block is still dragged along by what slides under it", () => {
+    const w = makeWorld(40, 10);
+    floor(w);
+    w.place(10, 8, "lobime");
+    w.place(10, 7, "bormite"); // the light one is on top: nothing presses the heavy one
+    w.setVelocity(10, 8, 0.14, 0);
+    for (let t = 0; t < 12; t++) w.step();
+    // The sliding heavy block carries the light one with it (cargo on a cart).
+    const x = w.find("bormite")[0][0];
+    const y = w.find("lobime")[0][0];
+    expect(Math.abs(x - y)).toBeLessThanOrEqual(1);
+  });
+});

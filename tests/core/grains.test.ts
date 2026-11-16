@@ -134,6 +134,50 @@ describe("grains: chipping", () => {
   });
 });
 
+describe("grains: pieces smaller than a block", () => {
+  it("a part-block piece falls and rests like any block, and weighs what it has", () => {
+    const w = ground(20, 14);
+    const fy = w.height - 1;
+    w.place(8, fy, "galog", { anchored: true });
+    w.place(8, 3, "lobime");
+    w.grains!.shape(w.idx(8, 3), 32);
+    const whole = VG.elements[VG.elementIndex.lobime].mass;
+    expect(w.bodyAt(8, 3)!.mass).toBeCloseTo(whole / 2, 10);
+    w.run(80);
+    expect(w.find("lobime")).toEqual([[8, fy - 1]]);
+    expect(w.grains!.fill[w.idx(8, fy - 1)]).toBe(0.5);
+    // The Galog under it feels half a stone, and emits half as much.
+    expect(w.inspect(8, fy)!.load).toBeCloseTo(whole / 2, 10);
+    const half = w.inspect(8, fy)!.output;
+    w.grains!.shape(w.idx(8, fy - 1), 64);
+    w.run(10);
+    expect(w.inspect(8, fy)!.output).toBeCloseTo(half * 2, 10);
+  });
+
+  it("its grains are the bottom ones, so it sits on what is below", () => {
+    const w = ground(20, 14);
+    w.place(8, 5, "lobime");
+    const g = w.grains!;
+    g.shape(w.idx(8, 5), 16);
+    const rows: number[] = [];
+    for (let n = 0; n < g.nn; n++) if (!g.gone[w.idx(8, 5) * g.nn + n]) rows.push(Math.floor(n / g.n));
+    expect(rows.length).toBe(16);
+    expect(Math.min(...rows)).toBe(g.n - 2);
+  });
+
+  it("still takes up its whole block: two small pieces cannot share one (a limit of stage 1)", () => {
+    const w = ground(20, 14);
+    const fy = w.height - 1;
+    w.place(8, fy - 1, "lobime");
+    w.grains!.shape(w.idx(8, fy - 1), 16);
+    w.place(8, 3, "lobime");
+    w.grains!.shape(w.idx(8, 3), 16);
+    w.run(120);
+    // The second quarter-piece rests a whole block above the first, with a gap between them.
+    expect(w.find("lobime")).toEqual([[8, fy - 2], [8, fy - 1]]);
+  });
+});
+
 describe("grains: dust", () => {
   it("falls, and comes to rest in a heap on what is below", () => {
     const w = ground(20, 12);

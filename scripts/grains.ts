@@ -136,3 +136,29 @@ for (const stones of [1, 3]) {
     console.log(`speed, crash site ${g.world.width}x${g.world.height} ${label}${gr ? ` (${gr.cells.length} grains of dust)` : ""}: ${ms.toFixed(2)} ms per tick = ${(1000 / ms).toFixed(0)} ticks per second`);
   }
 }
+
+// 6. Pieces smaller than a block (a block with only some of its grains), on the block grid.
+{
+  const beat = (fraction: number, weight: number): string => {
+    const sc = SCENARIOS.find((x) => x.id === "bouncer")!;
+    const w = sc.build(RG, { shaft: 10, weight });
+    const g = w.grains!;
+    const [[bx, by]] = w.find("bormite");
+    g.shape(w.idx(bx, by), Math.round(fraction * g.nn));
+    const q = RG.elementIndex.queflair;
+    const edges: number[] = [];
+    let was = 0;
+    for (let t = 0; t < 2000; t++) {
+      w.step();
+      let v = 0;
+      for (let i = 0; i < w.size; i++) if (w.elem[i] === q && w.output[i] > v) v = w.output[i];
+      if (was < 1 && v >= 1) edges.push(t);
+      was = v;
+    }
+    if (edges.length < 6) return `stops (${edges.length} beats)`;
+    const last = edges.slice(-5);
+    return `${((last[4] - last[0]) / 4).toFixed(0)} ticks`;
+  };
+  console.log("bouncer, 10-block drop, with the Bormite a part-block piece:");
+  for (const f of [1, 0.5, 0.25]) console.log(`  ${f} of a block: alone ${beat(f, 0)}; with one stone ${beat(f, 1)}; with two ${beat(f, 2)}`);
+}

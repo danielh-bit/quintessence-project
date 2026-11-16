@@ -185,6 +185,28 @@ export class Grains {
   }
 
   /**
+   * Make the block in cell c a piece of `count` grains, filled from the bottom
+   * row up (so it sits on what is below it). The rest of the block is simply
+   * not there: nothing turns to dust.
+   */
+  shape(c: number, count: number): void {
+    const w = this.w;
+    if (w.elem[c] === 0) return;
+    const k = count < 1 ? 1 : count > this.nn ? this.nn : Math.floor(count);
+    const base = c * this.nn;
+    for (let g = 0; g < this.nn; g++) {
+      // Grain g is in row floor(g / n) from the top; the bottom rows are kept.
+      const fromBottom = this.nn - 1 - g;
+      const row = (fromBottom - (fromBottom % this.n)) / this.n;
+      const col = g % this.n;
+      this.gone[base + g] = row * this.n + col < k ? 0 : 1;
+    }
+    this.fill[c] = k / this.nn;
+    const id = w.body[c];
+    if (id !== 0) w.recomputeMass(w.bodies.get(id)!);
+  }
+
+  /**
    * Knock grains off a block: the `count` grains nearest where the last blow
    * landed become dust where they were. A block left with too little crumbles
    * altogether. Returns how many grains came off.

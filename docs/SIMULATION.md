@@ -140,6 +140,23 @@ each tick (phase 5):               shock ≥ grip  →  the cell comes loose
 - Shock is kept only on anchored cells and only for elements with a grip.
 - This is a generic rule: anything that strikes an anchored cell hard and often enough digs it out. In v0 every grip is above 2 (the fastest a collision can be) and shock recovers 0.1 per tick, so no sandbox machine loosens anything (measured; `docs/TUNING.md`, entry 12).
 
+## Grains: the fine structure inside blocks (experimental, off in v0)
+
+The start of milestone 2 (`docs/MILESTONE_2_SPEC.md`). With a `grains` entry in the rules' world parameters, every block is a square of grains (`src/core/grains.ts`). `rules/v0.json` has no such entry, so nothing below applies to the shipped rules. A world whose blocks are all whole and that holds no dust behaves exactly as one without grains.
+
+| Thing | Rule |
+| --- | --- |
+| Chipping | Shock builds on an anchored block as described above. At the grip, the block does not come loose whole: the part of it nearest the blow (`chip`, a fraction of a block) becomes dust and the shock drops by the grip. A block with less than `crumbleBelow` left crumbles to dust. |
+| What is left | A block's mass and its response are multiplied by the fraction of its grains it has left. The shape travels with the block. |
+| Dust | Free grains on a grid `size` times finer than the blocks. Dust has no momentum: each tick it sinks at `dustFall` and is carried at `dustMobility ×` the push a whole block of its element would feel there. It cannot enter a solid grain or another grain of dust. Blocked below, it slides to a lower side; carried sideways, it climbs a one-grain step. Steps that are a fraction of a grain happen on some ticks, chosen by the hash RNG. |
+| Dust in the rules | Per block-sized area and element: the element's response to what reaches that area (exposure only), times the fraction of a block the dust there amounts to. Emitting dust is a source next tick. Dust lying on solid matter adds its weight to the load of the block under it (in phase 1). |
+| Solid matter moving into dust | The dust in the way of the arriving grains is moved to the nearest free spot, upwards first. |
+| Pieces | A loose block can have only some of its grains. It still takes up its whole block cell. |
+
+The blow that `strike` delivers can name the grain it lands on; a collision lands in the middle. Scenes and the state hash carry the grain masks, the dust and what the dust was emitting.
+
+Measurements, limits and the open decision about finer solids are in `docs/TUNING.md` (the two grain engine entries).
+
 ## One tick
 
 `World.step()` always runs these phases in this order:

@@ -3,7 +3,8 @@
 Read `GAME_OVERVIEW.md` before changing anything. This repo holds the **rules sandbox** and the start of the **2D demo**.
 
 - The sandbox answers one question: do the v0 local rules (overview §6) produce the §6 machines on their own? It stays as a developer tool.
-- The demo is built in six milestones (`docs/ROADMAP.md`). Milestone 1, the crash site, is playable: `npm run game`. Its simulation foundations are described in `docs/HANDOFF_M1.md`; what to try first is the playtest checklist in `docs/ROADMAP.md`.
+- The demo is built in milestones (`docs/ROADMAP.md`). Milestone 1, the crash site, is done and playable (`npm run game`). The order after it was changed by the first playtest: matter first (blocks made of grains), then the lab (experimentation equipment), then Lama, building, survival and the ship. `docs/MILESTONE_2_SPEC.md` has the design.
+- Milestone 2 has started with an engine spike: grains, chipping and dust exist in the core but are **off** in `rules/v0.json`. Results and the open decision are in `docs/TUNING.md` (the two grain engine entries).
 
 ## Core pillars (overview §3), in short
 
@@ -74,6 +75,7 @@ npx tsx scripts/sweep.ts bouncer 'elements.bormite.response.gain=0.003,0.004' sh
 npx tsx scripts/probe.ts bouncer shaft=10 ticks=200   # per-tick trace of a scenario
 npx tsx scripts/export-scenes.ts                      # regenerate scenes/*.json from src/scenarios
 npx tsx scripts/drift.ts 'world.airDrag=0,0.01' stones=1,3   # how far dust travels from a loaded Galog
+npx tsx scripts/grains.ts                                    # grain engine measurements (grains switched on for the run)
 ```
 
 ## Working rules for this repo

@@ -217,6 +217,36 @@ The first step of milestone 2 (`docs/MILESTONE_2_SPEC.md`). The engine is in `sr
   - Dust of two elements in the same block-sized area do not set each other off.
   - The pick's swing counts (12 for stone) are a first guess. They are set by `chip`, the grips and the pick's numbers.
 
+### 17. Grain engine spike, stage 2: pieces smaller than a block (measured; a decision is needed)
+
+Stage 2 asked for solid pieces smaller than a block that meet at grain resolution.
+
+- **Built: part-block pieces on the block grid.** A loose block can have only some of its grains (`Grains.shape`), filled from the bottom row up so it sits on what is below. It falls, rests, is carried and is mined like any block. Its mass and its response go with its size.
+- **Measured, bouncer with a 10-block drop and the Bormite a part-block piece:**
+
+| Bormite piece | Alone | With one stone | With two stones |
+| --- | --- | --- | --- |
+| Whole block | 30 ticks | 31 | 36 |
+| Half | 30 | 36 | stops |
+| Quarter | 30 | stops | stops |
+
+  Half the Bormite lifts about half the weight. A piece's size is a quantity the player can vary and read off a machine: a regularity that did not exist with whole blocks.
+- **Not built: pieces meeting at grain resolution.** A part-block piece still takes up its whole block. Two quarter-pieces cannot share a block, and one rests a full block above the other with a gap (pinned in `tests/core/grains.test.ts`).
+- **Why it was not built in the spike.** The core keeps one element and one body per block cell, and the rules read that directly. About 210 places rest on it: 60 in `world.ts`, the whole of motion and support (1,700 lines with world and carried grids), the energy spreads, scenes, the game layer and both renderers. Letting pieces overlap a block cell means every block-sized area holds a mix of pieces, as it already does for dust, and motion, support, load and the spreads all have to be rewritten to work from that mix. That is a new motion engine. The seven machines could be brought back, but not kept identical tick for tick while it is done.
+- **What each choice gives:**
+
+| | Part-block pieces on the block grid (built) | Fine solids (the rewrite) |
+| --- | --- | --- |
+| Chipping, dust, drift | Yes | Yes |
+| Choosing the size of a piece | Yes | Yes |
+| A piece's size changes what a machine does | Yes | Yes |
+| Two small pieces side by side in one block | No | Yes |
+| Thin walls, small ledges, pieces touching closely | No | Yes |
+| Machines identical to today while it is built | Yes | No |
+| Cost | Done | The core's motion, support and load rewritten, then every machine re-verified |
+
+- **A middle way, not tried:** halve the block (twice as many blocks each way) and scale every length in the rules data to match. Machines keep their shape at half the size, pieces get twice as fine, and the engine stays as it is. The cost is field time (about four times the cells) and re-checking each machine's numbers.
+
 ## Results per machine
 
 | Machine | Emerges? | Notes |

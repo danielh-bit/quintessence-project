@@ -1,17 +1,31 @@
 # Roadmap: the 2D demo
 
-The demo is built in six milestones. Each one adds one layer and ends with something playable. `GAME_OVERVIEW.md` holds the pillars and the build rules; each milestone has its own spec in `docs/`.
+The demo is built in milestones. Each one adds one layer and ends with something playable. `GAME_OVERVIEW.md` holds the pillars and the build rules; each milestone has its own spec in `docs/`.
 
-## The six milestones
+## The milestones
+
+The order was changed after the first playtest of milestone 1 (see "What the milestone 1 playtest showed"). Experimenting comes first: finer matter, then the equipment to experiment with. Lama, building, survival and the ship follow.
 
 | # | Milestone | What it adds | The question it answers |
 | --- | --- | --- | --- |
-| 1 | **The crash site** | A player with a pick and a pack in a handcrafted map, perceived through senses only. No goals, no Lama, no survival. | Does the world feel alive and surprising with only the player's senses? |
-| 2 | **Lama's record** | Lama logs what the player actually witnessed, and measures length, mass and time. Lama's console in the ship. | Does a record of what you saw make the world learnable without explaining it? |
-| 3 | **Survival** | Suit energy and the suit lamp, temperature, collapse and waking at the ship. | Do light pressures give direction without becoming a loop? |
-| 4 | **Building and instruments** | Bonding parts into machines, the first instruments made from the world's elements. | Does understanding turn into machines, and do instruments open new layers? |
-| 5 | **The ship as needs** | The ship as a list of capabilities to restore, met by whatever the player invents. | Do needs get met by several unrelated routes? |
-| 6 | **Demo polish and blind playtests** | Art and sound passes, tuning, and playtests with people who know nothing. | Does someone with no instructions find the science on their own? |
+| 1 | **The crash site** (done) | A player with a pick and a pack in a handcrafted map, perceived through senses only. No goals, no Lama, no survival. | Does the world feel alive and surprising with only the player's senses? |
+| 2 | **Matter** | Blocks made of grains: chipping instead of taking whole blocks, real dust that falls and drifts, the pack holding dust beside intact pieces. Spec: `docs/MILESTONE_2_SPEC.md`. | Does finer matter make mining, dust and small setups feel right while the machines keep emerging? |
+| 3 | **The lab** | Experimentation equipment: sample jars and more compartments, a portable field kit, a lab bench in the ship, and later a bulk hold. With it, a visual pass on the pack view, the HUD and the atmosphere. | Does the player experiment on purpose, and does the equipment make the pack's "live test ground" a choice rather than an accident? |
+| 4 | **Lama's record** | Lama logs what the player actually witnessed, and measures length, mass and time. Lama's console in the ship. | Does a record of what you saw make the world learnable without explaining it? |
+| 5 | **Building and instruments** | Bonding parts into machines, the first instruments made from the world's elements. | Does understanding turn into machines, and do instruments open new layers? |
+| 6 | **Survival** | Suit energy and the suit lamp, temperature, collapse and waking at the ship. | Do light pressures give direction without becoming a loop? |
+| 7 | **The ship as needs** | The ship as a list of capabilities to restore, met by whatever the player invents. | Do needs get met by several unrelated routes? |
+| 8 | **Demo polish and blind playtests** | Art and sound passes, tuning, and playtests with people who know nothing. | Does someone with no instructions find the science on their own? |
+
+## What the milestone 1 playtest showed
+
+One playtest, by the designer. No outside players yet.
+
+- **The pack was the most valuable thing in the game.** It is not a menu but a live test ground. Seeing Lobime on a Galog make a Queflair glow *inside the pack* showed what the elements are, and it was useful at once: the glow was carried into the cave to see by.
+- **Cells are too coarse.** Mining is all-or-nothing, there is no room for fine setups, and dust does not feel like dust: there are no small particles. Large blocks are fine; they need finer structure inside.
+- **Mining should chip.** A swing should chip the block where it lands; when enough is chipped, an amount of material is picked up.
+- **Samples and mining are different things,** and the places to keep them should differ: a live place where interactions show, and a traditional inventory for quantities. At the start the player has only the live, chaotic pack.
+- **The pack view, the HUD and the atmosphere are bleak.**
 
 ## Milestone 1: status
 

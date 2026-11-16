@@ -196,4 +196,7 @@ function computeLoad(w: World, list: Body[], contacts: Map<number, Contacts>): v
     }
     for (const c of b.cells) load[c] += carry.get(c)!;
   }
+
+  // Dust lying on solid matter weighs on it (see grains.ts).
+  if (w.grains) w.grains.addLoad();
 }

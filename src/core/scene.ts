@@ -28,6 +28,8 @@ export interface SceneCell {
   i?: number;
   /** Shock (anchored cells only). */
   k?: number;
+  /** Grains of the block that are gone, as grain indices (only with grains, only if any). */
+  g?: number[];
   /** Stored values of diffusion energies, by energy id. */
   f?: Record<string, number>;
 }
@@ -70,6 +72,10 @@ export interface Scene {
   cells: SceneCell[];
   bodies?: SceneBody[];
   carried?: SceneCarried[];
+  /** Dust: [fine x, fine y, element id] per grain (only with grains). */
+  dust?: Array<[number, number, string]>;
+  /** What dust was emitting: [block cell, element id, output, pitch]. */
+  dustEmitting?: Array<[number, string, number, number]>;
 }
 
 /** Snapshot the full state of a world. */
@@ -87,6 +93,10 @@ export function saveScene(w: World, meta: { name?: string; description?: string 
     if (w.outPitch[i] !== 0) c.p = w.outPitch[i];
     if (w.impact[i] !== 0) c.i = w.impact[i];
     if (w.shock[i] !== 0) c.k = w.shock[i];
+    if (w.grains && w.grains.fill[i] !== 1) {
+      c.g = [];
+      for (let n = 0; n < w.grains.nn; n++) if (w.grains.gone[i * w.grains.nn + n] !== 0) c.g.push(n);
+    }
     for (const en of diff) {
       const v = w.field[en.index][i];
       if (v !== 0) (c.f ??= {})[en.id] = v;
@@ -114,6 +124,12 @@ export function saveScene(w: World, meta: { name?: string; description?: string 
     cells,
     bodies,
   };
+  const gr = w.grains;
+  if (gr && gr.cells.length > 0) {
+    const sorted = [...gr.cells].sort((p, q) => p - q);
+    scene.dust = sorted.map((f) => [f % gr.fw, (f - (f % gr.fw)) / gr.fw, w.rules.elements[gr.dust[f]].id]);
+    if (gr.emitting.length > 0) scene.dustEmitting = gr.emitting.map((r) => [r.cell, w.rules.elements[r.element].id, r.output, r.pitch]);
+  }
   if (w.carried.length > 0) {
     scene.carried = w.carried.map((c) => {
       const sc: SceneCarried = { ports: c.ports.map((p) => [w.xOf(p), w.yOf(p)]), scene: saveScene(c.world) };
@@ -180,6 +196,13 @@ export function loadScene(rules: RuleSet, scene: unknown): World {
     if (c.p !== undefined) w.outPitch[i] = finite(c.p, "pitch");
     if (c.i !== undefined) w.impact[i] = finite(c.i, "impact");
     if (c.k !== undefined && c.a) w.shock[i] = finite(c.k, "shock");
+    if (c.g !== undefined) {
+      const gr = w.grains;
+      if (!gr) fail("the scene has chipped blocks but the rules have no grains");
+      if (!Array.isArray(c.g)) fail("gone grains must be a list");
+      for (const n of c.g) gr.gone[i * gr.nn + whole(n, "grain index")] = 1;
+      gr.fill[i] = gr.grainsLeft(i) / gr.nn;
+    }
     if (c.f !== undefined) {
       if (!isRecord(c.f)) fail(`stored energies at (${x}, ${y}) must be an object`);
       for (const [eid, v] of Object.entries(c.f)) {
@@ -224,6 +247,27 @@ export function loadScene(rules: RuleSet, scene: unknown): World {
     if (b) w.resplit(b);
   }
   if (s.tick !== undefined) w.tick = whole(s.tick, "tick");
+  if (s.dust !== undefined) {
+    const gr = w.grains;
+    if (!gr) fail("the scene has dust but the rules have no grains");
+    if (!Array.isArray(s.dust)) fail("dust must be a list");
+    const elOf = (id: unknown): number => {
+      const el = typeof id === "string" ? rules.elementIndex[id] : undefined;
+      if (el === undefined) fail(`unknown element "${String(id)}" in dust`);
+      return el;
+    };
+    for (const d of s.dust as unknown[]) {
+      if (!Array.isArray(d) || d.length !== 3) fail("a grain of dust must be [x, y, element]");
+      const fx = whole(d[0], "dust x");
+      const fy = whole(d[1], "dust y");
+      if (fx >= gr.fw || fy >= gr.fh) fail(`dust (${fx}, ${fy}) is outside the world`);
+      gr.addDust(fx, fy, elOf(d[2]));
+    }
+    for (const e of (s.dustEmitting ?? []) as unknown[]) {
+      if (!Array.isArray(e) || e.length !== 4) fail("a dust emission must be [cell, element, output, pitch]");
+      gr.emitting.push({ cell: whole(e[0], "dust cell"), element: elOf(e[1]), output: finite(e[2], "dust output"), pitch: finite(e[3], "dust pitch") });
+    }
+  }
 
   if (s.carried !== undefined) {
     if (!Array.isArray(s.carried)) fail("carried must be a list");

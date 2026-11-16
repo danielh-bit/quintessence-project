@@ -183,6 +183,40 @@ Walking on a loose block did not throw it out any more (entry 8 of the game laye
 - **Measured:** a player walking over 1 or 3 blocks of Lobime, Queflair, Bormite or Galog, either way, with the blocks made before or after the player: the blocks do not move (speed 0, same cells). Before: carried along at 0.08 to 0.15 cells/tick, a Bormite block several cells. Unloaded things are unchanged: cargo on a sliding cart is still dragged along (a core test).
 - **All earlier tests pass unchanged**, the seven machines and the scenes included. New tests: two in `tests/core/motion.test.ts`; `tests/game/legs.test.ts` now checks that blocks stay put in both orders (the tests fail without either change).
 
+### 16. Grain engine spike, stage 1: blocks made of grains (measured; grains are off in the rules)
+
+The first step of milestone 2 (`docs/MILESTONE_2_SPEC.md`). The engine is in `src/core/grains.ts`. It is switched on by a `grains` entry in the rules' world parameters. **`rules/v0.json` has none, so the game and the sandbox are unchanged.** Tests and `scripts/grains.ts` switch it on with the numbers below.
+
+- **Numbers tried:** `size` 8 (grains along a block's side), `chip` 0.25 (a quarter of a block comes off per chip), `crumbleBelow` 0.25, `dustFall` 0.1 blocks per tick, `dustMobility` 0.25 blocks per tick per unit of force.
+- **What the rules are:**
+  - *Chipping.* Shock builds on an anchored block exactly as before (entry 12). At the grip, instead of the whole block coming loose, the quarter of its grains nearest the blow become dust and the shock drops by the grip. A block left with under a quarter crumbles.
+  - *What is left.* A block's mass and response are multiplied by the fraction of grains it has left.
+  - *Dust* has no momentum. Each tick a grain sinks at `dustFall` and is carried at `dustMobility ×` the force a whole block of it would feel. Speeds under a grain per tick become a step on some ticks, chosen by the hash, so runs repeat exactly. A grain that cannot sink slides off to a lower side; a carried grain climbs a one-grain step.
+  - *Dust reacts* per block-sized area: the element's own response to what reaches that area, times the fraction of a block that the dust there amounts to. Dust lying on solid matter adds its weight to the block under it.
+- **Measured** (`npx tsx scripts/grains.ts`):
+
+| Check | Result |
+| --- | --- |
+| Whole blocks unchanged | With grains on, all 8 sandbox scenarios run cell for cell as without, over 3000 ticks, with no chip and no dust. With grains on in the shipped rules, 273 of the 280 tests of the time pass; the 7 that fail are the ones that expect the pick to take a whole block. |
+| Dust drift, 1 stone on the Galog | 48 grains of Bormite dust starting 2 to 4 blocks away end 3.8 to 5.3 blocks away, moving at up to 0.025 blocks per tick. |
+| Dust drift, 3 stones | Same resting place, up to 0.05 blocks per tick. |
+| Pick, swings to clear a block | Bormite 4, Queflair and Ralgen 8, Lobime, Galog and Exgen 12. Hard Rock and Dense Lobime: never (250 swings). Four chips each. |
+| Chips into the pack | All 64 grains of a cleared block arrive in the pack as dust. |
+| A chipped Galog under one stone | Whole: 60. Three quarters: 45. Half: 30. |
+| Speed, crash site (192×64), no grains | 0.7 ms per tick (about 1400 ticks per second). |
+| Speed with settled dust | 1000 grains: 2.5 ms. 5000: 4.3 ms. 20000: 12 ms (83 ticks per second). |
+| Speed by grain size (4, 8, 12) | No real difference: the cost goes with the number of grains of dust, not with how fine a block is. |
+| Determinism | Snapshots with chips and dust restore and continue identically; a recorded session with chipping replays to the same state. |
+
+- **The drift question (entries 9 and 13) is answered by dust.** Dust moves off slowly and gathers where the Galog's reach ends. The bouncer, the buzzer and the runaway engine are untouched because solid pieces still move as before. The experimental `flow` on the push is not needed for this.
+- **Limits of stage 1, to decide on before building further:**
+  - Dust costs time even when it lies still (about 0.5 ms per 1000 grains). Letting settled dust sleep is the obvious fix and is not done.
+  - Dust that gathers at the edge of a push keeps shuffling: it is carried up the heap and slides back.
+  - Dust in a carried grid ignores the carrier's jolts, and dust lying on a loose body does not add to that body's mass.
+  - Dust reacts only to exposure (it is not pressed, moved or struck), does not wear, and does not block any energy.
+  - Dust of two elements in the same block-sized area do not set each other off.
+  - The pick's swing counts (12 for stone) are a first guess. They are set by `chip`, the grips and the pick's numbers.
+
 ## Results per machine
 
 | Machine | Emerges? | Notes |

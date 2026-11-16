@@ -11,6 +11,7 @@
 
 import { type Carried, carriedMass, type Edge, edgeFor, type FieldSource, stepCarried } from "./carried";
 import { computeFields } from "./fields/index";
+import { Grains } from "./grains";
 import { applyMotion } from "./motion";
 import { applyEffects, applyResponses, applyStrain } from "./responses";
 import { hash32 } from "./rng";
@@ -122,6 +123,9 @@ export class World {
   passFx = 0;
   passFy = 0;
 
+  /** The fine structure inside blocks, and dust; null if the rules have no grains. */
+  readonly grains: Grains | null;
+
   readonly bodies = new Map<number, Body>();
   nextBodyId = 1;
   /** Events from the last step (degradations, cells shaken loose). */
@@ -150,6 +154,7 @@ export class World {
     this.forceY = new Float64Array(n);
     this.field = rules.energies.map(() => new Float64Array(n));
     this.ownField = rules.energies.map(() => new Float64Array(n));
+    this.grains = rules.world.grains ? new Grains(this, rules.world.grains) : null;
     this.outsideField = rules.energies.map(() => new Float64Array(n));
     this.leakedField = rules.energies.map(() => new Float64Array(n));
     this.dirX = rules.energies.map((e) => (e.directional ? new Float64Array(n) : null));
@@ -376,10 +381,19 @@ export class World {
    * A blow on a cell at the given closing speed: the same as an impact from a
    * collision. The cell feels it in the coming tick. `focus` says how much the
    * blow is concentrated (a pointed tool); an ordinary collision has focus 1.
+   * With grains, (gx, gy) says which grain of the block the blow lands on.
    */
-  strike(i: number, speed: number, focus = 1): void {
+  strike(i: number, speed: number, focus = 1, gx?: number, gy?: number): void {
     if (i < 0 || i >= this.size || this.elem[i] === 0 || !(speed > 0)) return;
-    if (speed >= this.rules.world.minImpact) this.feelImpact(i, speed, focus, this.impact);
+    if (speed < this.rules.world.minImpact) return;
+    // Where on the block the blow lands, as a grain (the middle if not said).
+    const g = this.grains;
+    if (g && gx !== undefined && gy !== undefined) {
+      const cx = gx < 0 ? 0 : gx >= g.n ? g.n - 1 : gx;
+      const cy = gy < 0 ? 0 : gy >= g.n ? g.n - 1 : gy;
+      g.hit[i] = cy * g.n + cx;
+    }
+    this.feelImpact(i, speed, focus, this.impact);
   }
 
   /**
@@ -448,7 +462,9 @@ export class World {
   /** A body's mass: its cells, plus everything in grids it carries. */
   recomputeMass(b: Body): void {
     let m = 0;
-    for (const c of b.cells) m += this.rules.elements[this.elem[c]].mass;
+    const g = this.grains;
+    if (g) for (const c of b.cells) m += this.rules.elements[this.elem[c]].mass * g.fill[c];
+    else for (const c of b.cells) m += this.rules.elements[this.elem[c]].mass;
     if (this.carried.length > 0) m += carriedMass(this, b);
     b.mass = m;
   }
@@ -456,7 +472,11 @@ export class World {
   /** Mass of every cell in this grid (and in grids carried in it). */
   totalMass(): number {
     let m = 0;
-    for (let i = 0; i < this.size; i++) if (this.elem[i] !== 0) m += this.rules.elements[this.elem[i]].mass;
+    const g = this.grains;
+    for (let i = 0; i < this.size; i++) {
+      if (this.elem[i] !== 0) m += this.rules.elements[this.elem[i]].mass * (g ? g.fill[i] : 1);
+    }
+    if (g) m += g.dustMass();
     for (const c of this.carried) m += c.world.totalMass();
     return m;
   }
@@ -505,6 +525,7 @@ export class World {
     const mine = this.diffusionFields();
     const theirs = from.diffusionFields();
     for (let f = 0; f < mine.length; f++) mine[f][j] = theirs[f][i];
+    if (this.grains && from.grains) this.grains.copyFrom(from.grains, i, j);
     from.removeCell(i);
     return this.newBody([j]);
   }
@@ -588,6 +609,7 @@ export class World {
     this.impact[i] = 0;
     this.impactNext[i] = 0;
     this.shock[i] = 0;
+    if (this.grains) this.grains.clear(i);
   }
 
   /**
@@ -612,8 +634,16 @@ export class World {
     const im = new Float64Array(n);
     const imn = new Float64Array(n);
     const df = diff.map(() => new Float64Array(n));
+    // The fine structure of each block travels with it.
+    const g = this.grains;
+    const gone = g ? new Uint8Array(n * g.nn) : null;
+    const fill = g ? new Float64Array(n) : null;
     for (let k = 0; k < n; k++) {
       const c = b.cells[k];
+      if (g) {
+        gone!.set(g.gone.subarray(c * g.nn, (c + 1) * g.nn), k * g.nn);
+        fill![k] = g.fill[c];
+      }
       el[k] = this.elem[c];
       st[k] = this.strain[c];
       out[k] = this.output[c];
@@ -637,7 +667,13 @@ export class World {
       this.impact[t] = im[k];
       this.impactNext[t] = imn[k];
       for (let f = 0; f < diff.length; f++) diff[f][t] = df[f][k];
+      if (g) {
+        g.gone.set(gone!.subarray(k * g.nn, (k + 1) * g.nn), t * g.nn);
+        g.fill[t] = fill![k];
+      }
     }
+    // Dust in the way of the solid grains that arrived is pushed aside.
+    if (g && g.cells.length > 0) for (const t of b.cells) g.displace(t);
   }
 
   // ------------------------------------------------------------------ simulation
@@ -651,16 +687,22 @@ export class World {
    *   5. strain              (recovery, degradation, body splits)
    *   6. motion              (gravity, forces, moves, collisions -> impacts)
    *   7. carried grids       (each grid riding on a body here takes its own tick)
+   * With grains, dust adds its weight in phase 1, responds after phase 3 and
+   * moves after phase 6.
    */
   step(): void {
     this.events = [];
     this.refreshCarriedMass();
     computeSupport(this);
+    const g = this.grains;
+    if (g) g.freed.clear();
     computeFields(this);
     applyResponses(this);
+    if (g) g.respond();
     applyEffects(this);
     applyStrain(this);
     applyMotion(this);
+    if (g) g.step();
     if (this.carried.length > 0) stepCarried(this);
     this.tick++;
   }
@@ -755,6 +797,14 @@ export class World {
     bodyState[k++] = this.tick;
     bodyState[k++] = this.nextBodyId;
     f64(bodyState);
+    const gr = this.grains;
+    if (gr) {
+      eat(gr.gone);
+      eat(gr.dust);
+      const em: number[] = [];
+      for (const r of gr.emitting) em.push(r.cell, r.element, r.output, r.pitch);
+      f64(new Float64Array(em));
+    }
     for (const c of this.carried) {
       const state = [c.ports.length, ...c.ports, c.lastVx, c.lastVy, c.fx, c.fy];
       for (const l of c.leak) state.push(l.energy, l.strength, l.pitch);

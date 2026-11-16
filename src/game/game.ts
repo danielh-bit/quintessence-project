@@ -154,7 +154,47 @@ export class Game {
     this.events = [];
     const struck = this.act(input);
     this.world.step();
-    if (struck >= 0) this.take(struck);
+    if (struck >= 0) {
+      this.take(struck);
+      this.gather(struck);
+    }
+  }
+
+  /**
+   * After a swing, with grains: the dust the blow knocked off the block it hit
+   * goes into the pack, grain by grain, as far as there is room at the top.
+   */
+  private gather(struck: number): void {
+    const w = this.world;
+    const g = w.grains;
+    const pg = this.pack.grains;
+    if (!g || !pg || g.freed.size === 0) return;
+    const grains = [...g.freed.entries()].filter(([, from]) => from === struck).map(([f]) => f).sort((p, q) => p - q);
+    if (grains.length === 0) return;
+    // Room at the top of the pack, as fine cells, top row first.
+    const layout = this.config.pack.layout;
+    const spots: number[] = [];
+    for (let y = 0; y < layout.length; y++) {
+      for (let x = 0; x < layout[y].length; x++) {
+        if (layout[y][x] !== "." || (y > 0 && layout[y - 1][x] === ".")) continue;
+        for (let ly = 0; ly < pg.n; ly++) for (let lx = 0; lx < pg.n; lx++) spots.push(pg.fineIdx(x * pg.n + lx, y * pg.n + ly));
+      }
+    }
+    spots.sort((p, q) => p - q);
+    let k = 0;
+    let element = 0;
+    let taken = 0;
+    for (const f of grains) {
+      while (k < spots.length && !pg.free(spots[k] % pg.fw, (spots[k] - (spots[k] % pg.fw)) / pg.fw)) k++;
+      if (k >= spots.length) break;
+      element = g.removeDust(f);
+      pg.addDust(spots[k] % pg.fw, (spots[k] - (spots[k] % pg.fw)) / pg.fw, element);
+      taken++;
+    }
+    if (taken === 0) return;
+    const b = this.body();
+    if (b) w.recomputeMass(b);
+    this.events.push({ kind: "take", x: w.xOf(struck), y: w.yOf(struck), element: w.rules.elements[element].id });
   }
 
   /**
@@ -269,7 +309,19 @@ export class Game {
       if (this.inReach(x, y)) {
         const i = w.idx(x, y);
         if (w.elem[i] !== 0 && w.body[i] !== b.id) {
-          w.strike(i, swing.speed, swing.focus);
+          // The blow lands on the block where it is nearest the body.
+          const g = w.grains;
+          if (g) {
+            let sx = 0;
+            let sy = 0;
+            for (const c of b.cells) {
+              sx += w.xOf(c);
+              sy += w.yOf(c);
+            }
+            const fx = Math.floor(((sx / b.cells.length + 0.5) - x) * g.n);
+            const fy = Math.floor(((sy / b.cells.length + 0.5) - y) * g.n);
+            w.strike(i, swing.speed, swing.focus, fx, fy);
+          } else w.strike(i, swing.speed, swing.focus);
           this.cooldown = swing.cooldown;
           struck = i;
           this.events.push({ kind: "swing", x, y, element: w.rules.elements[w.elem[i]].id });

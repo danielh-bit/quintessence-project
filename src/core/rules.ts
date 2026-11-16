@@ -4,6 +4,8 @@
 // world's physics comes from a RuleSet built here from plain JSON
 // (rules/v0.json). Elements and energies are addressed by index after loading.
 
+import type { GrainParams } from "./grains";
+
 export type SpreadKind = "radial" | "ray" | "conduction" | "diffusion";
 
 export const SPREAD_KINDS: readonly SpreadKind[] = ["radial", "ray", "conduction", "diffusion"];
@@ -30,6 +32,8 @@ export interface WorldParams {
   impactStrain: number;
   /** Shock an anchored cell shakes off per tick (see ElementDef.grip). */
   shockRecover: number;
+  /** The fine structure inside blocks (see grains.ts); null = blocks are whole and indivisible. */
+  grains: GrainParams | null;
 }
 
 export interface ShakeEffect {
@@ -198,7 +202,7 @@ function rejectUnknownKeys(o: Record<string, Json>, allowed: string[], path: str
 
 function parseWorld(v: Json): WorldParams {
   const o = obj(v, ".world");
-  rejectUnknownKeys(o, ["gravity", "maxSpeed", "airDrag", "friction", "restitution", "minImpact", "impactStrain", "shockRecover"], ".world");
+  rejectUnknownKeys(o, ["gravity", "maxSpeed", "airDrag", "friction", "restitution", "minImpact", "impactStrain", "shockRecover", "grains"], ".world");
   return {
     gravity: num(o, "gravity", ".world", { min: 0 }),
     maxSpeed: num(o, "maxSpeed", ".world", { min: 0 }),
@@ -208,6 +212,23 @@ function parseWorld(v: Json): WorldParams {
     minImpact: num(o, "minImpact", ".world", { min: 0 }),
     impactStrain: num(o, "impactStrain", ".world", { min: 0 }),
     shockRecover: num(o, "shockRecover", ".world", { min: 0, def: 0 }),
+    grains: parseGrains(o.grains),
+  };
+}
+
+function parseGrains(v: Json): GrainParams | null {
+  if (v === undefined || v === null) return null;
+  const path = ".world.grains";
+  const o = obj(v, path);
+  rejectUnknownKeys(o, ["size", "chip", "crumbleBelow", "dustFall", "dustMobility"], path);
+  const size = num(o, "size", path, { min: 2, max: 15 });
+  if (!Number.isInteger(size)) throw new RulesError(`${path}.size`, "must be a whole number of grains");
+  return {
+    size,
+    chip: num(o, "chip", path, { min: 0, max: 1 }),
+    crumbleBelow: num(o, "crumbleBelow", path, { min: 0, max: 1 }),
+    dustFall: num(o, "dustFall", path, { min: 0, max: 1 }),
+    dustMobility: num(o, "dustMobility", path, { min: 0 }),
   };
 }
 

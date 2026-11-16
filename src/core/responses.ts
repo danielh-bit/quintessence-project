@@ -27,6 +27,7 @@ export function applyResponses(w: World): void {
   w.forceX.fill(0);
   w.forceY.fill(0);
   const els = w.rules.elements;
+  const grains = w.grains;
   for (let c = 0; c < w.size; c++) {
     const el = w.elem[c];
     if (el === 0) continue;
@@ -70,6 +71,8 @@ export function applyResponses(w: World): void {
     if (eff < 0) eff = 0;
     let target = r.gain * input * eff;
     if (target > r.max) target = r.max;
+    // A chipped block responds with what it has left.
+    if (grains) target *= grains.fill[c];
     const decayed = w.output[c] * r.decay;
     let out = target >= decayed ? target : decayed;
     if (out < OUTPUT_FLOOR) out = 0;
@@ -184,8 +187,15 @@ export function applyStrain(w: World): void {
     if (sh > 0) {
       const grip = els[el].grip;
       if (grip !== null && sh >= grip && w.body[c] === 0) {
-        w.loosen(c);
-        w.events.push({ tick: w.tick, kind: "loosen", x: w.xOf(c), y: w.yOf(c), element: el, into: el });
+        if (w.grains) {
+          // With grains, the block is not freed whole: a part of it near the blow comes off as dust.
+          w.shock[c] = sh - grip;
+          w.grains.chip(c, Math.round(w.grains.params.chip * w.grains.nn));
+          w.events.push({ tick: w.tick, kind: "loosen", x: w.xOf(c), y: w.yOf(c), element: el, into: w.elem[c] });
+        } else {
+          w.loosen(c);
+          w.events.push({ tick: w.tick, kind: "loosen", x: w.xOf(c), y: w.yOf(c), element: el, into: el });
+        }
       } else {
         const left = sh - w.rules.world.shockRecover;
         w.shock[c] = left > 0 ? left : 0;

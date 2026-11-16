@@ -41,6 +41,14 @@ export function computeFields(w: World): void {
       sources[e].pitch.push(w.outPitch[c]);
     }
   }
+  // Dust that emits (see grains.ts).
+  if (w.grains) {
+    for (const src of w.grains.sources()) {
+      sources[src.energy].cells.push(src.cell);
+      sources[src.energy].strength.push(src.strength);
+      sources[src.energy].pitch.push(src.pitch);
+    }
+  }
   // What grids carried inside this one let out, at their openings.
   for (const so of sources) so.firstCarried = so.cells.length;
   for (const src of carriedSources(w)) {
